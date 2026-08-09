@@ -11,125 +11,140 @@
     mc:Ignorable="d">
 
     <Window.InputBindings>
-
         <!--
             ESC kann später zum Abbrechen einer Aktion
             verwendet werden.
         -->
 
         <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
-
     </Window.InputBindings>
 
     <DockPanel>
 
-        <!--  =====================================================  -->
-        <!--  Menü  -->
-        <!--  =====================================================  -->
+    <!-- ===================================================== -->
+    <!-- Menü                                                   -->
+    <!-- ===================================================== -->
 
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_Datei">
-                <MenuItem Click="OnNewBoardClick"  Header="_Neu" />
-                <Separator />
-                <MenuItem Click="OnExitClick"  Header="_Beenden" />
-            </MenuItem>
+    <Menu DockPanel.Dock="Top">
 
+        <MenuItem Header="_Datei">
 
-            <MenuItem Header="_Bearbeiten">
+            <MenuItem Header="_Neu"
+                          Click="NewBoard_Click"/>
 
-                <MenuItem Click="OnDeleteClick" Header="_Löschen" />
+            <Separator/>
 
-            </MenuItem>
+            <MenuItem Header="_Beenden"
+                          Click="Exit_Click"/>
 
-
-            <MenuItem Header="_Ansicht">
-
-                <MenuItem Click="OnResetBoardClick"  Header="_Whiteboard zurücksetzen" />
-
-            </MenuItem>
-
-        </Menu>
+        </MenuItem>
 
 
-        <!--  =====================================================  -->
-        <!--  Statusleiste  -->
-        <!--  =====================================================  -->
+        <MenuItem Header="_Bearbeiten">
 
-        <StatusBar DockPanel.Dock="Bottom">
+            <MenuItem Header="_Löschen"
+                          Click="Delete_Click"/>
 
-            <StatusBarItem>
-                <TextBlock x:Name="StatusText" Text="Bereit" />
-            </StatusBarItem>
-
-            <Separator />
-
-            <StatusBarItem HorizontalContentAlignment="Right">
-
-                <TextBlock Text="WhiteBoard" />
-
-            </StatusBarItem>
-
-        </StatusBar>
+        </MenuItem>
 
 
-        <!--  =====================================================  -->
-        <!--  Whiteboard  -->
-        <!--  =====================================================  -->
+        <MenuItem Header="_Ansicht">
 
-        <Border
-            Margin="8"
-            Background="{StaticResource BoardBackgroundBrush}"
-            BorderBrush="{StaticResource BoardBorderBrush}"
-            BorderThickness="1">
+            <MenuItem Header="_Whiteboard zurücksetzen"
+                          Click="ResetBoard_Click"/>
 
-            <!--
-                Das Canvas ist die eigentliche Zeichenfläche.
-                
-                Wichtig:
-                Wir verwenden bereits jetzt ein Canvas,
-                weil später Shapes, Texte und Pfeile darauf
-                positioniert werden.
-            -->
+        </MenuItem>
 
-            <Canvas
-                x:Name="WhiteBoardCanvas"
-                Background="{StaticResource BoardBackgroundBrush}"
-                MouseRightButtonDown="OnWhiteBoardCanvasMouseRightButtonDown">
-
-                <!--  =================================================  -->
-                <!--  Contextmenü des Whiteboards  -->
-                <!--  =================================================  -->
-
-                <Canvas.ContextMenu>
-
-                    <ContextMenu x:Name="WhiteBoardContextMenu" BorderBrush="{StaticResource MenuBorderBrush}">
+    </Menu>
 
 
-                        <!--  Neue Elemente  -->
-                        <MenuItem Header="Neues Element">
+    <!-- ===================================================== -->
+    <!-- Statusleiste                                           -->
+    <!-- ===================================================== -->
 
-                            <MenuItem Click="OnAddShapeClick"  Header="Shape" />
+    <StatusBar DockPanel.Dock="Bottom">
 
-                            <MenuItem Click="OnAddTextClick"  Header="Text" />
+        <StatusBarItem>
+            <TextBlock x:Name="StatusText"
+                           Text="Whiteboard bereit"/>
+        </StatusBarItem>
 
-                            <MenuItem Click="OnAddArrowClick"  Header="Pfeil" />
-                        </MenuItem>
+        <Separator/>
 
-                        <Separator />
+        <StatusBarItem HorizontalContentAlignment="Right">
 
-                        <!--  Board  -->
-                        <MenuItem Header="Board">
-                            <MenuItem Click="OnClearBoardClick" Header="Board leeren" />
-                            <MenuItem Click="OnResetBoardClick" Header="Board zurücksetzen" />
-                        </MenuItem>
+            <TextBlock Text="WhiteBoard"/>
 
-                        <Separator />
+        </StatusBarItem>
 
-                        <MenuItem Click="OnCloseContextMenu" Header="Abbrechen" />
+    </StatusBar>
 
-                    </ContextMenu>
-                </Canvas.ContextMenu>
-            </Canvas>
-        </Border>
+
+    <!-- ===================================================== -->
+    <!-- Whiteboard                                              -->
+    <!-- ===================================================== -->
+
+    <Border Margin="8"
+                BorderBrush="{StaticResource BoardBorderBrush}"
+                BorderThickness="1"
+                Background="{StaticResource BoardBackgroundBrush}">
+
+        <Canvas x:Name="WhiteBoardCanvas"
+                    Background="{StaticResource BoardBackgroundBrush}"
+                    MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown"
+                    MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown">
+
+
+            <!-- ================================================= -->
+            <!-- Contextmenü                                        -->
+            <!-- ================================================= -->
+
+            <Canvas.ContextMenu>
+
+                <ContextMenu x:Name="WhiteBoardContextMenu"
+                                 BorderBrush="{StaticResource MenuBorderBrush}">
+
+                    <MenuItem Header="Neues Element">
+
+                        <MenuItem Header="Shape"
+                                      Click="AddShape_Click"/>
+
+                        <MenuItem Header="Text"
+                                      Click="AddText_Click"/>
+
+                        <MenuItem Header="Pfeil"
+                                      Click="AddArrow_Click"/>
+
+                    </MenuItem>
+
+
+                    <Separator/>
+
+
+                    <MenuItem Header="Board">
+
+                        <MenuItem Header="Board leeren"
+                                      Click="ClearBoard_Click"/>
+
+                        <MenuItem Header="Board zurücksetzen"
+                                      Click="ResetBoard_Click"/>
+
+                    </MenuItem>
+
+
+                    <Separator/>
+
+
+                    <MenuItem Header="Abbrechen"
+                                  Click="CloseContextMenu_Click"/>
+
+                </ContextMenu>
+
+            </Canvas.ContextMenu>
+
+        </Canvas>
+
+    </Border>
+
     </DockPanel>
 </Window>
