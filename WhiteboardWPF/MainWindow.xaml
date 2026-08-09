@@ -21,130 +21,129 @@
 
     <DockPanel>
 
-    <!-- ===================================================== -->
-    <!-- Menü                                                   -->
-    <!-- ===================================================== -->
+        <!--  =====================================================  -->
+        <!--  Menü  -->
+        <!--  =====================================================  -->
 
-    <Menu DockPanel.Dock="Top">
+        <Menu DockPanel.Dock="Top">
 
-        <MenuItem Header="_Datei">
+            <MenuItem Header="_Datei">
 
-            <MenuItem Header="_Neu"
-                          Click="NewBoard_Click"/>
+                <MenuItem Click="NewBoard_Click" Header="_Neu" />
 
-            <Separator/>
+                <Separator />
 
-            <MenuItem Header="_Beenden"
-                          Click="Exit_Click"/>
+                <MenuItem Click="Exit_Click" Header="_Beenden" />
 
-        </MenuItem>
+            </MenuItem>
 
 
-        <MenuItem Header="_Bearbeiten">
+            <MenuItem Header="_Bearbeiten">
 
-            <MenuItem Header="_Löschen"
-                          Click="Delete_Click"/>
+                <MenuItem Click="Delete_Click" Header="_Löschen" />
 
-        </MenuItem>
-
-
-        <MenuItem Header="_Ansicht">
-
-            <MenuItem Header="_Whiteboard zurücksetzen"
-                          Click="ResetBoard_Click"/>
-
-        </MenuItem>
-
-    </Menu>
+            </MenuItem>
 
 
-    <!-- ===================================================== -->
-    <!-- Statusleiste                                           -->
-    <!-- ===================================================== -->
+            <MenuItem Header="_Ansicht">
 
-    <StatusBar DockPanel.Dock="Bottom">
+                <MenuItem Click="ResetBoard_Click" Header="_Whiteboard zurücksetzen" />
 
-        <StatusBarItem>
-            <TextBlock x:Name="StatusText"
-                           Text="Whiteboard bereit"/>
-        </StatusBarItem>
+            </MenuItem>
 
-        <Separator/>
-
-        <StatusBarItem HorizontalContentAlignment="Right">
-
-            <TextBlock Text="WhiteBoard"/>
-
-        </StatusBarItem>
-
-    </StatusBar>
+        </Menu>
 
 
-    <!-- ===================================================== -->
-    <!-- Whiteboard                                              -->
-    <!-- ===================================================== -->
+        <!--  =====================================================  -->
+        <!--  Statusleiste  -->
+        <!--  =====================================================  -->
 
-    <Border Margin="8"
-                BorderBrush="{StaticResource BoardBorderBrush}"
-                BorderThickness="1"
-                Background="{StaticResource BoardBackgroundBrush}">
+        <StatusBar DockPanel.Dock="Bottom">
 
-        <Canvas x:Name="WhiteBoardCanvas"
-                    Background="{StaticResource BoardBackgroundBrush}"
-                    MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown"
-                    MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="Whiteboard bereit" />
+            </StatusBarItem>
 
+            <Separator />
 
-            <!-- ================================================= -->
-            <!-- Contextmenü                                        -->
-            <!-- ================================================= -->
+            <StatusBarItem HorizontalContentAlignment="Right">
 
-            <Canvas.ContextMenu>
+                <TextBlock Text="WhiteBoard" />
 
-                <ContextMenu x:Name="WhiteBoardContextMenu"
-                                 BorderBrush="{StaticResource MenuBorderBrush}">
+            </StatusBarItem>
 
-                    <MenuItem Header="Neues Element">
-
-                        <MenuItem Header="Shape"
-                                      Click="AddShape_Click"/>
-
-                        <MenuItem Header="Text"
-                                      Click="AddText_Click"/>
-
-                        <MenuItem Header="Pfeil"
-                                      Click="AddArrow_Click"/>
-
-                    </MenuItem>
+        </StatusBar>
 
 
-                    <Separator/>
+        <!--  =====================================================  -->
+        <!--  Whiteboard  -->
+        <!--  =====================================================  -->
+
+        <Border
+            Margin="8"
+            Background="{StaticResource BoardBackgroundBrush}"
+            BorderBrush="{StaticResource BoardBorderBrush}"
+            BorderThickness="1">
+
+            <Canvas
+                x:Name="WhiteBoardCanvas"
+                Background="{StaticResource BoardBackgroundBrush}"
+                MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown"
+                MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown">
 
 
-                    <MenuItem Header="Board">
+                <!--  =================================================  -->
+                <!--  Contextmenü  -->
+                <!--  =================================================  -->
 
-                        <MenuItem Header="Board leeren"
-                                      Click="ClearBoard_Click"/>
+                <Canvas.ContextMenu>
 
-                        <MenuItem Header="Board zurücksetzen"
-                                      Click="ResetBoard_Click"/>
+                    <ContextMenu x:Name="WhiteBoardContextMenu" BorderBrush="{StaticResource MenuBorderBrush}">
 
-                    </MenuItem>
+                        <MenuItem Header="Neues Element">
+
+                            <MenuItem Header="Shape">
+
+                                <MenuItem Click="AddRectangle_Click" Header="Rechteck" />
+
+                                <MenuItem Click="AddRoundedRectangle_Click" Header="Abgerundetes Rechteck" />
+
+                                <MenuItem Click="AddEllipse_Click" Header="Ellipse" />
+
+                                <MenuItem Click="AddDiamond_Click" Header="Raute" />
+
+                            </MenuItem>
+
+                            <MenuItem Click="AddText_Click" Header="Text" />
+
+                            <MenuItem Click="AddArrow_Click" Header="Pfeil" />
+
+                        </MenuItem>
+                        
+                        <Separator />
 
 
-                    <Separator/>
+                        <MenuItem Header="Board">
+
+                            <MenuItem Click="ClearBoard_Click" Header="Board leeren" />
+
+                            <MenuItem Click="ResetBoard_Click" Header="Board zurücksetzen" />
+
+                        </MenuItem>
 
 
-                    <MenuItem Header="Abbrechen"
-                                  Click="CloseContextMenu_Click"/>
+                        <Separator />
 
-                </ContextMenu>
 
-            </Canvas.ContextMenu>
+                        <MenuItem Click="CloseContextMenu_Click" Header="Abbrechen" />
 
-        </Canvas>
+                    </ContextMenu>
 
-    </Border>
+                </Canvas.ContextMenu>
+
+            </Canvas>
+
+        </Border>
 
     </DockPanel>
 </Window>

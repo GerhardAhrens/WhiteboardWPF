@@ -146,19 +146,10 @@
             // Shape
             // --------------------------------------------------------
 
-            var border = new Border
-            {
-                Background = Brushes.White,
+            var shapeVisual =
+                CreateShapeVisual(shape);
 
-                BorderBrush = Brushes.DimGray,
-                BorderThickness = new Thickness(2),
-
-                CornerRadius = new CornerRadius(4),
-
-                IsHitTestVisible = true
-            };
-
-            grid.Children.Add(border);
+            grid.Children.Add(shapeVisual);
 
 
             // --------------------------------------------------------
@@ -1014,6 +1005,226 @@
             }
         }
 
+        private void AddRectangle_Click(
+    object sender,
+    RoutedEventArgs e)
+        {
+            AddShape(ShapeType.Rectangle);
+        }
+
+
+        private void AddRoundedRectangle_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            AddShape(ShapeType.RoundedRectangle);
+        }
+
+
+        private void AddEllipse_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            AddShape(ShapeType.Ellipse);
+        }
+
+
+        private void AddDiamond_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            AddShape(ShapeType.Diamond);
+        }
+
+        private void AddShape(
+    ShapeType shapeType)
+        {
+            var shape = new ShapeElement
+            {
+                ShapeType = shapeType,
+
+                X = _contextMenuPosition.X,
+                Y = _contextMenuPosition.Y,
+
+                Width = 160,
+                Height = 90,
+
+                Text = string.Empty
+            };
+
+
+            var control =
+                CreateShapeControl(shape);
+
+
+            WhiteBoardCanvas.Children.Add(
+                control);
+
+
+            SelectShape(control);
+
+
+            StatusText.Text =
+                $"{GetShapeName(shapeType)} erstellt";
+
+
+            WhiteBoardContextMenu.IsOpen = false;
+        }
+
+        private string GetShapeName(
+    ShapeType shapeType)
+        {
+            return shapeType switch
+            {
+                ShapeType.Rectangle =>
+                    "Rechteck",
+
+                ShapeType.RoundedRectangle =>
+                    "Abgerundetes Rechteck",
+
+                ShapeType.Ellipse =>
+                    "Ellipse",
+
+                ShapeType.Diamond =>
+                    "Raute",
+
+                _ =>
+                    "Shape"
+            };
+        }
+
+        private FrameworkElement CreateShapeVisual(
+    ShapeElement shape)
+        {
+            switch (shape.ShapeType)
+            {
+                case ShapeType.Rectangle:
+                    {
+                        return new Border
+                        {
+                            Background = Brushes.White,
+
+                            BorderBrush =
+                                Brushes.DimGray,
+
+                            BorderThickness =
+                                new Thickness(2),
+
+                            CornerRadius =
+                                new CornerRadius(0),
+
+                            IsHitTestVisible = true
+                        };
+                    }
+
+
+                case ShapeType.RoundedRectangle:
+                    {
+                        return new Border
+                        {
+                            Background = Brushes.White,
+
+                            BorderBrush =
+                                Brushes.DimGray,
+
+                            BorderThickness =
+                                new Thickness(2),
+
+                            CornerRadius =
+                                new CornerRadius(15),
+
+                            IsHitTestVisible = true
+                        };
+                    }
+
+
+                case ShapeType.Ellipse:
+                    {
+                        return new System.Windows.Shapes.Ellipse
+                        {
+                            Fill = Brushes.White,
+
+                            Stroke =
+                                Brushes.DimGray,
+
+                            StrokeThickness = 2,
+
+                            IsHitTestVisible = true
+                        };
+                    }
+
+
+                case ShapeType.Diamond:
+                    {
+                        return new System.Windows.Shapes.Polygon
+                        {
+                            Fill = Brushes.White,
+
+                            Stroke =
+                                Brushes.DimGray,
+
+                            StrokeThickness = 2,
+
+                            Points = new PointCollection
+                {
+                    new Point(0.5, 0),
+                    new Point(1, 0.5),
+                    new Point(0.5, 1),
+                    new Point(0, 0.5)
+                },
+
+                            Stretch =
+                                Stretch.Fill,
+
+                            IsHitTestVisible = true
+                        };
+                    }
+
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void SetShapeSelectedVisual(
+    Grid shape,
+    bool selected)
+        {
+            if (shape.Children.Count == 0)
+                return;
+
+
+            if (shape.Children[0]
+                is Border border)
+            {
+                border.BorderBrush =
+                    selected
+                        ? Brushes.DodgerBlue
+                        : Brushes.DimGray;
+
+                border.BorderThickness =
+                    selected
+                        ? new Thickness(3)
+                        : new Thickness(2);
+
+                return;
+            }
+
+
+            if (shape.Children[0]
+                is System.Windows.Shapes.Shape vectorShape)
+            {
+                vectorShape.Stroke =
+                    selected
+                        ? Brushes.DodgerBlue
+                        : Brushes.DimGray;
+
+                vectorShape.StrokeThickness =
+                    selected
+                        ? 3
+                        : 2;
+            }
+        }
 
         // ============================================================
         // Auswahl
@@ -1022,19 +1233,15 @@
         private void SelectShape(
             Grid? shape)
         {
+            // --------------------------------------------------------
+            // Alte Auswahl entfernen
+            // --------------------------------------------------------
+
             if (_selectedShape != null)
             {
-                if (_selectedShape.Children.Count > 0 &&
-                    _selectedShape.Children[0]
-                        is Border oldBorder)
-                {
-                    oldBorder.BorderBrush =
-                        Brushes.DimGray;
-
-                    oldBorder.BorderThickness =
-                        new Thickness(2);
-                }
-
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    false);
 
                 SetResizeHandlesVisibility(
                     _selectedShape,
@@ -1042,22 +1249,18 @@
             }
 
 
+            // --------------------------------------------------------
+            // Neue Auswahl
+            // --------------------------------------------------------
+
             _selectedShape = shape;
 
 
             if (_selectedShape != null)
             {
-                if (_selectedShape.Children.Count > 0 &&
-                    _selectedShape.Children[0]
-                        is Border border)
-                {
-                    border.BorderBrush =
-                        Brushes.DodgerBlue;
-
-                    border.BorderThickness =
-                        new Thickness(3);
-                }
-
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    true);
 
                 SetResizeHandlesVisibility(
                     _selectedShape,
@@ -1069,7 +1272,6 @@
                     GetHighestZIndex() + 1);
             }
         }
-
 
         // ============================================================
         // Resize-Griffe anzeigen/verstecken

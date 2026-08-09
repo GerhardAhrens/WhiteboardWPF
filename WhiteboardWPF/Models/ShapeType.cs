@@ -1,7 +1,10 @@
 ﻿namespace WhiteboardWPF.Models
 {
-    public enum ShapeType
+    public enum ShapeType : int
     {
-        Rectangle
+        Rectangle,
+        RoundedRectangle,
+        Ellipse,
+        Diamond
     }
 }
