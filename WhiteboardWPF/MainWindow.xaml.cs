@@ -55,6 +55,15 @@
         private string _textBeforeEditing = string.Empty;
 
 
+        // ============================================================
+        // Pfeile
+        // ============================================================
+        private readonly List<ArrowElement> _arrows = new();
+
+        private bool _isCreatingArrow;
+
+        private Grid? _arrowSourceShape;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -652,19 +661,44 @@
                 return;
 
 
-            /*
-             * Resize-Griffe dürfen nicht das normale
-             * Verschieben des Shapes auslösen.
-             */
+            // ========================================================
+            // Pfeil erstellen
+            // ========================================================
+
+            if (_isCreatingArrow)
+            {
+                CreateArrow(
+                    _arrowSourceShape,
+                    shape);
+
+                e.Handled = true;
+
+                return;
+            }
+
+
+            // ========================================================
+            // Resize-Griffe
+            // ========================================================
 
             if (e.OriginalSource is Thumb)
                 return;
 
 
-            /*
-             * Wenn gerade ein Text bearbeitet wird,
-             * nicht gleichzeitig das Shape verschieben.
-             */
+            // ========================================================
+            // Doppelklick auf Text
+            // ========================================================
+
+            if (e.ClickCount >= 2 &&
+                e.OriginalSource is TextBox)
+            {
+                return;
+            }
+
+
+            // ========================================================
+            // Normales Verschieben
+            // ========================================================
 
             if (_editingTextBox != null)
                 return;
@@ -688,6 +722,423 @@
             shape.CaptureMouse();
 
             e.Handled = true;
+        }
+
+        private void CreateArrow(
+    Grid? sourceShape,
+    Grid targetShape)
+        {
+            if (sourceShape == null)
+            {
+                CancelArrowCreation();
+                return;
+            }
+
+
+            if (sourceShape == targetShape)
+            {
+                StatusText.Text =
+                    "Quelle und Ziel müssen unterschiedlich sein.";
+
+                return;
+            }
+
+
+            if (sourceShape.Tag is not ShapeElement sourceModel)
+            {
+                CancelArrowCreation();
+                return;
+            }
+
+
+            if (targetShape.Tag is not ShapeElement targetModel)
+            {
+                CancelArrowCreation();
+                return;
+            }
+
+
+            var arrow = new ArrowElement
+            {
+                SourceId = sourceModel.Id,
+
+                TargetId = targetModel.Id
+            };
+
+
+            _arrows.Add(arrow);
+
+
+            DrawArrow(arrow);
+
+
+            _isCreatingArrow = false;
+
+            _arrowSourceShape = null;
+
+
+            SelectShape(targetShape);
+
+
+            StatusText.Text =
+                "Pfeil erstellt";
+        }
+
+        private void DrawArrow(
+            ArrowElement arrow)
+        {
+            Grid? sourceShape =
+                FindShape(arrow.SourceId);
+
+            Grid? targetShape =
+                FindShape(arrow.TargetId);
+
+            if (sourceShape == null ||
+                targetShape == null)
+            {
+                return;
+            }
+
+            Point start =
+                GetConnectionPoint(
+                    sourceShape,
+                    targetShape);
+
+            Point end =
+                GetConnectionPoint(
+                    targetShape,
+                    sourceShape);
+
+            Vector direction =
+                end - start;
+
+            if (direction.Length < 1)
+                return;
+
+            direction.Normalize();
+
+            Vector perpendicular =
+                new Vector(
+                    -direction.Y,
+                    direction.X);
+
+            const double arrowLength = 12;
+            const double arrowWidth = 6;
+
+            Point arrowBase =
+                end - direction * arrowLength;
+
+            Point left =
+                arrowBase +
+                perpendicular * arrowWidth;
+
+            Point right =
+                arrowBase -
+                perpendicular * arrowWidth;
+
+            var geometry =
+                new StreamGeometry();
+
+            using (StreamGeometryContext context =
+                   geometry.Open())
+            {
+                // Linie
+                context.BeginFigure(
+                    start,
+                    false,
+                    false);
+
+                context.LineTo(
+                    arrowBase,
+                    true,
+                    false);
+
+                // Pfeilspitze
+                context.BeginFigure(
+                    left,
+                    true,
+                    true);
+
+                context.LineTo(
+                    end,
+                    true,
+                    false);
+
+                context.LineTo(
+                    right,
+                    true,
+                    false);
+            }
+
+            geometry.Freeze();
+
+            var path =
+                new System.Windows.Shapes.Path
+                {
+                    Data = geometry,
+
+                    Stroke = Brushes.DimGray,
+
+                    StrokeThickness = 2,
+
+                    Fill = Brushes.DimGray,
+
+                    IsHitTestVisible = false,
+
+                    Tag = arrow
+                };
+
+            Panel.SetZIndex(
+                path,
+                -1000);
+
+            WhiteBoardCanvas.Children.Add(
+                path);
+        }
+
+
+        private Point GetConnectionPoint(
+    Grid source,
+    Grid target)
+        {
+            double sourceX =
+                Canvas.GetLeft(source);
+
+            double sourceY =
+                Canvas.GetTop(source);
+
+
+            double sourceWidth =
+                source.ActualWidth;
+
+            double sourceHeight =
+                source.ActualHeight;
+
+
+            double targetX =
+                Canvas.GetLeft(target);
+
+            double targetY =
+                Canvas.GetTop(target);
+
+
+            double targetWidth =
+                target.ActualWidth;
+
+            double targetHeight =
+                target.ActualHeight;
+
+
+            Point sourceCenter =
+                new Point(
+                    sourceX + sourceWidth / 2,
+                    sourceY + sourceHeight / 2);
+
+
+            Point targetCenter =
+                new Point(
+                    targetX + targetWidth / 2,
+                    targetY + targetHeight / 2);
+
+
+            double dx =
+                targetCenter.X -
+                sourceCenter.X;
+
+
+            double dy =
+                targetCenter.Y -
+                sourceCenter.Y;
+
+
+            /*
+             * Wenn das Ziel hauptsächlich rechts oder links liegt,
+             * verwenden wir die linke/rechte Seite.
+             */
+
+            if (Math.Abs(dx) >= Math.Abs(dy))
+            {
+                if (dx >= 0)
+                {
+                    return new Point(
+                        sourceX + sourceWidth,
+                        sourceCenter.Y);
+                }
+
+
+                return new Point(
+                    sourceX,
+                    sourceCenter.Y);
+            }
+
+
+            /*
+             * Ansonsten verwenden wir oben/unten.
+             */
+
+            if (dy >= 0)
+            {
+                return new Point(
+                    sourceCenter.X,
+                    sourceY + sourceHeight);
+            }
+
+
+            return new Point(
+                sourceCenter.X,
+                sourceY);
+        }
+
+        private Grid? FindShape(
+    Guid id)
+        {
+            foreach (UIElement element
+                     in WhiteBoardCanvas.Children)
+            {
+                if (element is Grid grid &&
+                    grid.Tag is ShapeElement model &&
+                    model.Id == id)
+                {
+                    return grid;
+                }
+            }
+
+
+            return null;
+        }
+
+        private void CancelArrowCreation()
+        {
+            _isCreatingArrow = false;
+
+            _arrowSourceShape = null;
+
+            StatusText.Text =
+                "Pfeilerstellung abgebrochen";
+        }
+
+        private void UpdateArrows()
+        {
+            foreach (UIElement element
+                     in WhiteBoardCanvas.Children)
+            {
+                if (element is System.Windows.Shapes.Path path &&
+                    path.Tag is ArrowElement arrow)
+                {
+                    UpdateArrowPath(
+                        path,
+                        arrow);
+                }
+            }
+        }
+
+        private void UpdateArrowPath(
+    System.Windows.Shapes.Path path,
+    ArrowElement arrow)
+        {
+            Grid? sourceShape =
+                FindShape(arrow.SourceId);
+
+            Grid? targetShape =
+                FindShape(arrow.TargetId);
+
+
+            if (sourceShape == null ||
+                targetShape == null)
+            {
+                return;
+            }
+
+
+            Point start =
+                GetConnectionPoint(
+                    sourceShape,
+                    targetShape);
+
+
+            Point end =
+                GetConnectionPoint(
+                    targetShape,
+                    sourceShape);
+
+
+            Vector direction =
+                end - start;
+
+
+            if (direction.Length < 1)
+                return;
+
+
+            direction.Normalize();
+
+
+            Vector perpendicular =
+                new Vector(
+                    -direction.Y,
+                    direction.X);
+
+
+            const double arrowLength = 12;
+
+            const double arrowWidth = 6;
+
+
+            Point arrowBase =
+                end -
+                direction * arrowLength;
+
+
+            Point left =
+                arrowBase +
+                perpendicular * arrowWidth;
+
+
+            Point right =
+                arrowBase -
+                perpendicular * arrowWidth;
+
+
+            var geometry =
+                new StreamGeometry();
+
+
+            using (StreamGeometryContext context =
+                   geometry.Open())
+            {
+                context.BeginFigure(
+                    start,
+                    false,
+                    false);
+
+                context.LineTo(
+                    arrowBase,
+                    true,
+                    false);
+
+
+                context.BeginFigure(
+                    left,
+                    true,
+                    true);
+
+                context.LineTo(
+                    end,
+                    true,
+                    false);
+
+                context.LineTo(
+                    right,
+                    true,
+                    false);
+            }
+
+
+            geometry.Freeze();
+
+
+            path.Data =
+                geometry;
         }
 
         // ============================================================
@@ -976,6 +1427,7 @@
                 model.Height = newHeight;
             }
 
+            UpdateArrows();
 
             StatusText.Text =
                 $"Größe: " +
@@ -1422,9 +1874,14 @@
 
             _selectedShape = null;
 
+            _isCreatingArrow = false;
+
+            _arrowSourceShape = null;
+
+            _arrows.Clear();
+
             WhiteBoardCanvas.Children.Clear();
         }
-
 
         // ============================================================
         // Contextmenü
@@ -1461,9 +1918,29 @@
             object sender,
             RoutedEventArgs e)
         {
-            ShowNotImplemented(
-                "Pfeil",
-                "Pfeile werden in einem späteren Schritt implementiert.");
+            if (_selectedShape == null)
+            {
+                MessageBox.Show(
+                    "Bitte zuerst ein Shape auswählen, von dem " +
+                    "der Pfeil ausgehen soll.",
+                    "Pfeil erstellen",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                return;
+            }
+
+
+            _arrowSourceShape = _selectedShape;
+
+            _isCreatingArrow = true;
+
+
+            WhiteBoardContextMenu.IsOpen = false;
+
+
+            StatusText.Text =
+                "Pfeil: Ziel-Shape auswählen";
         }
 
 
