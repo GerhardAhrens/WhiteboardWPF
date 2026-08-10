@@ -6,7 +6,11 @@
     using System.Windows.Input;
     using System.Windows.Media;
 
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
+
     using WhiteboardWPF.Models;
+    using System.IO;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -65,6 +69,7 @@
         private Grid? _arrowSourceShape;
         
         private System.Windows.Shapes.Path? _selectedArrow;
+
 
         public MainWindow()
         {
@@ -1971,6 +1976,64 @@
             StatusText.Text = $"{elementName}: Funktion folgt später";
         }
 
+        // ============================================================
+        // JSON Optionen
+        // ============================================================
+        private JsonSerializerOptions CreateJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                WriteIndented = true,
+
+                PropertyNamingPolicy =
+                    JsonNamingPolicy.CamelCase
+            };
+        }
+
+        private void SaveBoard(string fileName)
+        {
+            var document =
+                new WhiteBoardDocument
+                {
+                    Version = 1,
+
+                    Shapes =
+                        GetShapeModels(),
+
+                    Arrows =
+                        _arrows.ToList()
+                };
+
+
+            var options =
+                CreateJsonOptions();
+
+
+            string json =
+                JsonSerializer.Serialize(
+                    document,
+                    options);
+
+
+            File.WriteAllText(
+                fileName,
+                json);
+
+
+            StatusText.Text =
+                $"Board gespeichert: {fileName}";
+        }
+
+        private List<ShapeElement> GetShapeModels()
+        {
+            return WhiteBoardCanvas.Children
+                .OfType<Grid>()
+                .Where(grid =>
+                    grid.Tag is ShapeElement)
+                .Select(grid =>
+                    (ShapeElement)grid.Tag)
+                .ToList();
+        }
 
         // ============================================================
         // Resize-Richtungen
