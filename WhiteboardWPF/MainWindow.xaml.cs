@@ -691,83 +691,80 @@
                 "Pfeil erstellt";
         }
 
-        private void DrawArrow(ArrowElement arrow)
+        private void DrawArrow(
+            ArrowElement arrow)
         {
-            Grid? sourceShape = FindShape(arrow.SourceId);
+            Grid? sourceShape =
+                FindShape(arrow.SourceId);
 
-            Grid? targetShape = FindShape(arrow.TargetId);
+            Grid? targetShape =
+                FindShape(arrow.TargetId);
 
-            if (sourceShape == null || targetShape == null)
+
+            if (sourceShape == null ||
+                targetShape == null)
             {
                 return;
             }
 
-            Point start = GetConnectionPoint(sourceShape,targetShape);
 
-            Point end = GetConnectionPoint(targetShape, sourceShape);
+            Point start =
+                GetConnectionPoint(
+                    sourceShape,
+                    targetShape);
 
-            Vector direction = end - start;
 
-            if (direction.Length < 1)
-                return;
+            Point end =
+                GetConnectionPoint(
+                    targetShape,
+                    sourceShape);
 
-            direction.Normalize();
-
-            Vector perpendicular = new Vector(-direction.Y, direction.X);
-
-            const double arrowLength = 12;
-            const double arrowWidth = 6;
-
-            Point arrowBase = end - direction * arrowLength;
-
-            Point left = arrowBase + perpendicular * arrowWidth;
-
-            Point right = arrowBase - perpendicular * arrowWidth;
-
-            var geometry = new StreamGeometry();
-
-            using (StreamGeometryContext context = geometry.Open())
-            {
-                // Linie
-                context.BeginFigure(start, false, false);
-
-                context.LineTo(arrowBase, true, false);
-
-                // Pfeilspitze
-                context.BeginFigure(left, true, true);
-
-                context.LineTo(end, true, false);
-
-                context.LineTo(right, true, false);
-            }
-
-            geometry.Freeze();
 
             var path =
                 new System.Windows.Shapes.Path
                 {
-                    Data = geometry,
+                    Stroke =
+                        Brushes.DimGray,
 
-                    Stroke = Brushes.DimGray,
+                    StrokeThickness =
+                        2,
 
-                    StrokeThickness = 2,
+                    Fill =
+                        Brushes.DimGray,
 
-                    Fill = Brushes.DimGray,
+                    IsHitTestVisible =
+                        true,
 
-                    IsHitTestVisible = true,
-
-                    Tag = arrow
+                    Tag =
+                        arrow
                 };
 
-            path.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
 
-            path.ContextMenu = CreateArrowContextMenu();
+            CreateArrowGeometry(
+                path,
+                start,
+                end);
 
-            path.ContextMenuOpening += Arrow_ContextMenuOpening;
 
-            Panel.SetZIndex(path, -1000);
+            path.MouseLeftButtonDown +=
+                Arrow_MouseLeftButtonDown;
 
-            WhiteBoardCanvas.Children.Add(path);
+
+            path.ContextMenu =
+                CreateArrowContextMenu();
+
+
+            path.ContextMenuOpening +=
+                Arrow_ContextMenuOpening;
+
+
+            Panel.SetZIndex(
+                path,
+                -1000);
+
+
+            WhiteBoardCanvas.Children.Add(
+                path);
         }
 
         private void Arrow_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -779,53 +776,193 @@
             SelectArrow(arrow);
         }
 
-        private Point GetConnectionPoint(Grid source, Grid target)
+        private Point GetConnectionPoint(
+            Grid source,
+            Grid target)
         {
-            double sourceX = Canvas.GetLeft(source);
-            double sourceY = Canvas.GetTop(source);
-
-            double sourceWidth = source.ActualWidth;
-            double sourceHeight = source.ActualHeight;
-
-            double targetX = Canvas.GetLeft(target);
-            double targetY = Canvas.GetTop(target);
-
-            double targetWidth = target.ActualWidth;
-            double targetHeight = target.ActualHeight;
-
-            Point sourceCenter = new Point(sourceX + sourceWidth / 2, sourceY + sourceHeight / 2);
-            Point targetCenter = new Point(targetX + targetWidth / 2, targetY + targetHeight / 2);
-
-            double dx = targetCenter.X - sourceCenter.X;
-            double dy = targetCenter.Y - sourceCenter.Y;
+            if (source.Tag is not ShapeElement sourceModel)
+                return new Point();
 
 
-            /*
-             * Wenn das Ziel hauptsächlich rechts oder links liegt,
-             * verwenden wir die linke/rechte Seite.
-             */
+            if (target.Tag is not ShapeElement targetModel)
+                return new Point();
 
-            if (Math.Abs(dx) >= Math.Abs(dy))
+
+            Point sourceCenter =
+                new Point(
+                    sourceModel.X +
+                        sourceModel.Width / 2,
+
+                    sourceModel.Y +
+                        sourceModel.Height / 2);
+
+
+            Point targetCenter =
+                new Point(
+                    targetModel.X +
+                        targetModel.Width / 2,
+
+                    targetModel.Y +
+                        targetModel.Height / 2);
+
+
+            Vector direction =
+                targetCenter -
+                sourceCenter;
+
+
+            if (direction.Length < 0.001)
+                return sourceCenter;
+
+
+            direction.Normalize();
+
+
+            return sourceModel.ShapeType switch
             {
-                if (dx >= 0)
-                {
-                    return new Point(sourceX + sourceWidth, sourceCenter.Y);
-                }
+                ShapeType.Rectangle =>
+                    GetRectangleConnectionPoint(
+                        sourceModel,
+                        sourceCenter,
+                        direction),
 
-                return new Point(sourceX, sourceCenter.Y);
-            }
+                ShapeType.RoundedRectangle =>
+                    GetRectangleConnectionPoint(
+                        sourceModel,
+                        sourceCenter,
+                        direction),
 
-            /*
-             * Ansonsten verwenden wir oben/unten.
-             */
+                ShapeType.Ellipse =>
+                    GetEllipseConnectionPoint(
+                        sourceModel,
+                        sourceCenter,
+                        direction),
 
-            if (dy >= 0)
-            {
-                return new Point(sourceCenter.X, sourceY + sourceHeight);
-            }
+                ShapeType.Diamond =>
+                    GetDiamondConnectionPoint(
+                        sourceModel,
+                        sourceCenter,
+                        direction),
 
-            return new Point(sourceCenter.X, sourceY);
+                _ =>
+                    sourceCenter
+            };
         }
+
+        private Point GetRectangleConnectionPoint(
+            ShapeElement shape,
+            Point center,
+            Vector direction)
+        {
+            double halfWidth =
+                shape.Width / 2;
+
+            double halfHeight =
+                shape.Height / 2;
+
+
+            double scaleX =
+                Math.Abs(direction.X) < 0.000001
+                    ? double.PositiveInfinity
+                    : halfWidth /
+                      Math.Abs(direction.X);
+
+
+            double scaleY =
+                Math.Abs(direction.Y) < 0.000001
+                    ? double.PositiveInfinity
+                    : halfHeight /
+                      Math.Abs(direction.Y);
+
+
+            double scale =
+                Math.Min(
+                    scaleX,
+                    scaleY);
+
+
+            return center +
+                   direction * scale;
+        }
+
+        private Point GetEllipseConnectionPoint(
+            ShapeElement shape,
+            Point center,
+            Vector direction)
+        {
+            double radiusX =
+                shape.Width / 2;
+
+            double radiusY =
+                shape.Height / 2;
+
+
+            double denominator =
+                Math.Sqrt(
+                    Math.Pow(
+                        direction.X / radiusX,
+                        2) +
+
+                    Math.Pow(
+                        direction.Y / radiusY,
+                        2));
+
+
+            if (denominator < 0.000001)
+                return center;
+
+
+            double scale =
+                1 / denominator;
+
+
+            return center +
+                   direction * scale;
+        }
+
+        private Point GetDiamondConnectionPoint(
+            ShapeElement shape,
+            Point center,
+            Vector direction)
+        {
+            double halfWidth =
+                shape.Width / 2;
+
+            double halfHeight =
+                shape.Height / 2;
+
+
+            double denominator =
+                Math.Abs(direction.X) /
+                    halfWidth
+
+                +
+
+                Math.Abs(direction.Y) /
+                    halfHeight;
+
+
+            if (denominator < 0.000001)
+                return center;
+
+
+            double scale =
+                1 / denominator;
+
+
+            return center +
+                   direction * scale;
+        }
+
+        /*
+        private Point GetRoundedRectangleConnectionPoint(Grid shape, Point center, Vector direction)
+        {
+            return GetRectangleConnectionPoint(
+                shape,
+                center,
+                direction);
+        }
+        */
 
         private Grid? FindShape(Guid id)
         {
@@ -851,78 +988,153 @@
 
         private void UpdateArrows()
         {
-            foreach (UIElement element
-                     in WhiteBoardCanvas.Children)
+            foreach (ArrowElement arrow in _arrows.ToList())
             {
-                if (element is System.Windows.Shapes.Path path &&
-                    path.Tag is ArrowElement arrow)
-                {
-                    UpdateArrowPath(path, arrow);
-                }
+                UpdateArrow(arrow);
             }
         }
 
-        private void UpdateArrowPath(System.Windows.Shapes.Path path, ArrowElement arrow)
+        private void UpdateArrow(ArrowElement arrow)
         {
-            Grid? sourceShape = FindShape(arrow.SourceId);
+            var path =
+                WhiteBoardCanvas.Children
+                    .OfType<System.Windows.Shapes.Path>()
+                    .FirstOrDefault(p =>
+                        ReferenceEquals(
+                            p.Tag,
+                            arrow));
 
-            Grid? targetShape = FindShape(arrow.TargetId);
+
+            if (path == null)
+                return;
 
 
-            if (sourceShape == null || targetShape == null)
+            UpdateArrowPath(path, arrow);
+        }
+
+        private void UpdateArrowPath(
+            System.Windows.Shapes.Path path,
+            ArrowElement arrow)
+        {
+            Grid? sourceShape =
+                FindShape(arrow.SourceId);
+
+            Grid? targetShape =
+                FindShape(arrow.TargetId);
+
+
+            if (sourceShape == null ||
+                targetShape == null)
             {
                 return;
             }
 
-            Point start = GetConnectionPoint(sourceShape, targetShape);
-            Point end = GetConnectionPoint(targetShape, sourceShape);
 
-            Vector direction = end - start;
+            Point start =
+                GetConnectionPoint(
+                    sourceShape,
+                    targetShape);
 
 
-            if (direction.Length < 1)
+            Point end =
+                GetConnectionPoint(
+                    targetShape,
+                    sourceShape);
+
+
+            CreateArrowGeometry(
+                path,
+                start,
+                end);
+        }
+
+        private void CreateArrowGeometry(System.Windows.Shapes.Path path, Point start, Point end)
+        {
+            Vector direction =
+                end - start;
+
+
+            if (direction.Length < 0.001)
                 return;
 
 
             direction.Normalize();
 
-            Vector perpendicular = new Vector(direction.Y, direction.X);
+
+            Vector perpendicular =
+                new Vector(
+                    -direction.Y,
+                    direction.X);
+
 
             const double arrowLength = 12;
 
             const double arrowWidth = 6;
 
-            Point arrowBase = end - direction * arrowLength;
+
+            Point arrowBase =
+                end -
+                direction * arrowLength;
 
 
-            Point left = arrowBase + perpendicular * arrowWidth;
+            Point left =
+                arrowBase +
+                perpendicular * arrowWidth;
 
 
-            Point right = arrowBase - perpendicular * arrowWidth;
+            Point right =
+                arrowBase -
+                perpendicular * arrowWidth;
 
 
-            var geometry = new StreamGeometry();
+            var geometry =
+                new StreamGeometry();
 
 
-            using (StreamGeometryContext context = geometry.Open())
+            using (StreamGeometryContext context =
+                   geometry.Open())
             {
-                context.BeginFigure(start, false, false);
+                // ----------------------------------------------------
+                // Linie
+                // ----------------------------------------------------
 
-                context.LineTo(arrowBase, true, false);
+                context.BeginFigure(
+                    start,
+                    false,
+                    false);
+
+                context.LineTo(
+                    arrowBase,
+                    true,
+                    false);
 
 
-                context.BeginFigure(left, true, true);
+                // ----------------------------------------------------
+                // Pfeilspitze
+                // ----------------------------------------------------
 
-                context.LineTo(end, true, false);
+                context.BeginFigure(
+                    left,
+                    true,
+                    true);
 
-                context.LineTo( right, true, false);
+                context.LineTo(
+                    end,
+                    true,
+                    false);
+
+                context.LineTo(
+                    right,
+                    true,
+                    false);
             }
 
 
             geometry.Freeze();
 
 
-            path.Data = geometry;
+            path.Data =
+                geometry;
         }
 
         private ContextMenu CreateArrowContextMenu()
@@ -1076,6 +1288,7 @@
                 model.Y = newY;
             }
 
+            UpdateArrows();
 
             StatusText.Text = $"Shape: X={newX:0}, Y={newY:0}";
 
