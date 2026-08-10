@@ -1581,13 +1581,76 @@
                 return;
             }
 
-            WhiteBoardCanvas.Children.Remove( _selectedShape);
+
+            if (_selectedShape.Tag is not ShapeElement shapeModel)
+            {
+                return;
+            }
+
+
+            Guid shapeId = shapeModel.Id;
+
+
+            // ========================================================
+            // Alle Pfeile ermitteln, die mit dem Shape verbunden sind
+            // ========================================================
+
+            var connectedArrows = _arrows
+                .Where(arrow =>
+                    arrow.SourceId == shapeId ||
+                    arrow.TargetId == shapeId)
+                .ToList();
+
+
+            // ========================================================
+            // Pfeildarstellungen aus dem Canvas entfernen
+            // ========================================================
+
+            foreach (var element in WhiteBoardCanvas.Children
+                         .OfType<System.Windows.Shapes.Path>()
+                         .ToList())
+            {
+                if (element.Tag is not ArrowElement arrow)
+                    continue;
+
+
+                if (arrow.SourceId == shapeId ||
+                    arrow.TargetId == shapeId)
+                {
+                    WhiteBoardCanvas.Children.Remove(element);
+                }
+            }
+
+
+            // ========================================================
+            // Pfeile aus dem Datenmodell entfernen
+            // ========================================================
+
+            foreach (var arrow in connectedArrows)
+            {
+                _arrows.Remove(arrow);
+            }
+
+
+            // ========================================================
+            // Eventuelle Pfeilauswahl entfernen
+            // ========================================================
+
+            _selectedArrow = null;
+
+
+            // ========================================================
+            // Shape entfernen
+            // ========================================================
+
+            WhiteBoardCanvas.Children.Remove(_selectedShape);
+
 
             _selectedShape = null;
 
-            StatusText.Text = "Shape gelöscht";
-        }
 
+            StatusText.Text = "Shape und verbundene Pfeile gelöscht";
+        }
 
         // ============================================================
         // Board leeren
