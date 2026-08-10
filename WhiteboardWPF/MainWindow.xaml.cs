@@ -63,6 +63,8 @@
         private bool _isCreatingArrow;
 
         private Grid? _arrowSourceShape;
+        
+        private System.Windows.Shapes.Path? _selectedArrow;
 
         public MainWindow()
         {
@@ -76,16 +78,11 @@
         // Whiteboard - rechte Maustaste
         // ============================================================
 
-        private void WhiteBoardCanvas_MouseRightButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
+        private void WhiteBoardCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _contextMenuPosition =
-                e.GetPosition(WhiteBoardCanvas);
+            _contextMenuPosition = e.GetPosition(WhiteBoardCanvas);
 
-            StatusText.Text =
-                $"Position: X={_contextMenuPosition.X:0}, " +
-                $"Y={_contextMenuPosition.Y:0}";
+            StatusText.Text = $"Position: X={_contextMenuPosition.X:0}, Y={_contextMenuPosition.Y:0}";
         }
 
 
@@ -93,9 +90,7 @@
         // Whiteboard - linke Maustaste
         // ============================================================
 
-        private void WhiteBoardCanvas_MouseLeftButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
+        private void WhiteBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             SelectShape(null);
         }
@@ -105,9 +100,7 @@
         // Shape erstellen
         // ============================================================
 
-        private void AddShape_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddShape_Click(object sender, RoutedEventArgs e)
         {
             var shape = new ShapeElement
             {
@@ -128,8 +121,7 @@
 
             SelectShape(control);
 
-            StatusText.Text =
-                "Shape erstellt";
+            StatusText.Text = "Shape erstellt";
 
             WhiteBoardContextMenu.IsOpen = false;
         }
@@ -139,8 +131,7 @@
         // Shape-Control erzeugen
         // ============================================================
 
-        private Grid CreateShapeControl(
-            ShapeElement shape)
+        private Grid CreateShapeControl(ShapeElement shape)
         {
             var grid = new Grid
             {
@@ -168,54 +159,25 @@
             var textBox = new TextBox
             {
                 Text = shape.Text,
-
-                HorizontalAlignment =
-                    HorizontalAlignment.Stretch,
-
-                VerticalAlignment =
-                    VerticalAlignment.Stretch,
-
-                HorizontalContentAlignment =
-                    HorizontalAlignment.Center,
-
-                VerticalContentAlignment =
-                    VerticalAlignment.Center,
-
-                TextAlignment =
-                    TextAlignment.Center,
-
-                TextWrapping =
-                    TextWrapping.Wrap,
-
-                Background =
-                    Brushes.Transparent,
-
-                BorderThickness =
-                    new Thickness(0),
-
-                Padding =
-                    new Thickness(8),
-
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8),
                 FontSize = 16,
-
                 IsReadOnly = true,
-
                 IsHitTestVisible = true,
-
                 Cursor = Cursors.Arrow,
-
                 Tag = shape
             };
 
-            textBox.MouseDoubleClick +=
-                ShapeText_MouseDoubleClick;
-
-            textBox.KeyDown +=
-                ShapeTextBox_KeyDown;
-
-            textBox.LostFocus +=
-                ShapeTextBox_LostFocus;
-
+            textBox.MouseDoubleClick += ShapeText_MouseDoubleClick;
+            textBox.KeyDown += ShapeTextBox_KeyDown;
+            textBox.LostFocus += ShapeTextBox_LostFocus;
 
             grid.Children.Add(textBox);
 
@@ -224,87 +186,36 @@
             // Contextmenü für das Shape
             // --------------------------------------------------------
 
-            var shapeContextMenu =
-                CreateShapeContextMenu();
-
-            grid.ContextMenu =
-                shapeContextMenu;
-
+            var shapeContextMenu = CreateShapeContextMenu();
+            grid.ContextMenu = shapeContextMenu;
 
             // --------------------------------------------------------
             // Position
             // --------------------------------------------------------
 
             Canvas.SetLeft(grid, shape.X);
-
             Canvas.SetTop(grid, shape.Y);
-
 
             // --------------------------------------------------------
             // Verschieben
             // --------------------------------------------------------
 
-            grid.PreviewMouseLeftButtonDown +=
-                Shape_PreviewMouseLeftButtonDown;
-
-            grid.PreviewMouseMove +=
-                Shape_PreviewMouseMove;
-
-            grid.PreviewMouseLeftButtonUp +=
-                Shape_PreviewMouseLeftButtonUp;
+            grid.PreviewMouseLeftButtonDown += Shape_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += Shape_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += Shape_PreviewMouseLeftButtonUp;
 
             // --------------------------------------------------------
             // Resize-Griffe
             // --------------------------------------------------------
 
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Left,
-                VerticalAlignment.Top,
-                ResizeDirection.TopLeft);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Center,
-                VerticalAlignment.Top,
-                ResizeDirection.Top);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Top,
-                ResizeDirection.TopRight);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Left,
-                VerticalAlignment.Center,
-                ResizeDirection.Left);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Center,
-                ResizeDirection.Right);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Left,
-                VerticalAlignment.Bottom,
-                ResizeDirection.BottomLeft);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Center,
-                VerticalAlignment.Bottom,
-                ResizeDirection.Bottom);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Bottom,
-                ResizeDirection.BottomRight);
-
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
+            AddResizeThumb(grid, HorizontalAlignment.Left,VerticalAlignment.Center, ResizeDirection.Left);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
 
             return grid;
         }
@@ -324,9 +235,7 @@
                 Header = "Text bearbeiten"
             };
 
-            editTextItem.Click +=
-                ShapeEditText_Click;
-
+            editTextItem.Click += ShapeEditText_Click;
 
             contextMenu.Items.Add(editTextItem);
 
@@ -339,9 +248,7 @@
         // Text über Contextmenü bearbeiten
         // ============================================================
 
-        private void ShapeEditText_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void ShapeEditText_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not MenuItem menuItem)
                 return;
@@ -784,90 +691,54 @@
                 "Pfeil erstellt";
         }
 
-        private void DrawArrow(
-            ArrowElement arrow)
+        private void DrawArrow(ArrowElement arrow)
         {
-            Grid? sourceShape =
-                FindShape(arrow.SourceId);
+            Grid? sourceShape = FindShape(arrow.SourceId);
 
-            Grid? targetShape =
-                FindShape(arrow.TargetId);
+            Grid? targetShape = FindShape(arrow.TargetId);
 
-            if (sourceShape == null ||
-                targetShape == null)
+            if (sourceShape == null || targetShape == null)
             {
                 return;
             }
 
-            Point start =
-                GetConnectionPoint(
-                    sourceShape,
-                    targetShape);
+            Point start = GetConnectionPoint(sourceShape,targetShape);
 
-            Point end =
-                GetConnectionPoint(
-                    targetShape,
-                    sourceShape);
+            Point end = GetConnectionPoint(targetShape, sourceShape);
 
-            Vector direction =
-                end - start;
+            Vector direction = end - start;
 
             if (direction.Length < 1)
                 return;
 
             direction.Normalize();
 
-            Vector perpendicular =
-                new Vector(
-                    -direction.Y,
-                    direction.X);
+            Vector perpendicular = new Vector(-direction.Y, direction.X);
 
             const double arrowLength = 12;
             const double arrowWidth = 6;
 
-            Point arrowBase =
-                end - direction * arrowLength;
+            Point arrowBase = end - direction * arrowLength;
 
-            Point left =
-                arrowBase +
-                perpendicular * arrowWidth;
+            Point left = arrowBase + perpendicular * arrowWidth;
 
-            Point right =
-                arrowBase -
-                perpendicular * arrowWidth;
+            Point right = arrowBase - perpendicular * arrowWidth;
 
-            var geometry =
-                new StreamGeometry();
+            var geometry = new StreamGeometry();
 
-            using (StreamGeometryContext context =
-                   geometry.Open())
+            using (StreamGeometryContext context = geometry.Open())
             {
                 // Linie
-                context.BeginFigure(
-                    start,
-                    false,
-                    false);
+                context.BeginFigure(start, false, false);
 
-                context.LineTo(
-                    arrowBase,
-                    true,
-                    false);
+                context.LineTo(arrowBase, true, false);
 
                 // Pfeilspitze
-                context.BeginFigure(
-                    left,
-                    true,
-                    true);
+                context.BeginFigure(left, true, true);
 
-                context.LineTo(
-                    end,
-                    true,
-                    false);
+                context.LineTo(end, true, false);
 
-                context.LineTo(
-                    right,
-                    true,
-                    false);
+                context.LineTo(right, true, false);
             }
 
             geometry.Freeze();
@@ -883,72 +754,50 @@
 
                     Fill = Brushes.DimGray,
 
-                    IsHitTestVisible = false,
+                    IsHitTestVisible = true,
 
                     Tag = arrow
                 };
 
-            Panel.SetZIndex(
-                path,
-                -1000);
+            path.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
 
-            WhiteBoardCanvas.Children.Add(
-                path);
+            path.ContextMenu = CreateArrowContextMenu();
+
+            path.ContextMenuOpening += Arrow_ContextMenuOpening;
+
+            Panel.SetZIndex(path, -1000);
+
+            WhiteBoardCanvas.Children.Add(path);
         }
 
-
-        private Point GetConnectionPoint(
-    Grid source,
-    Grid target)
+        private void Arrow_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            double sourceX =
-                Canvas.GetLeft(source);
-
-            double sourceY =
-                Canvas.GetTop(source);
+            if (sender is not System.Windows.Shapes.Path arrow)
+                return;
 
 
-            double sourceWidth =
-                source.ActualWidth;
+            SelectArrow(arrow);
+        }
 
-            double sourceHeight =
-                source.ActualHeight;
+        private Point GetConnectionPoint(Grid source, Grid target)
+        {
+            double sourceX = Canvas.GetLeft(source);
+            double sourceY = Canvas.GetTop(source);
 
+            double sourceWidth = source.ActualWidth;
+            double sourceHeight = source.ActualHeight;
 
-            double targetX =
-                Canvas.GetLeft(target);
+            double targetX = Canvas.GetLeft(target);
+            double targetY = Canvas.GetTop(target);
 
-            double targetY =
-                Canvas.GetTop(target);
+            double targetWidth = target.ActualWidth;
+            double targetHeight = target.ActualHeight;
 
+            Point sourceCenter = new Point(sourceX + sourceWidth / 2, sourceY + sourceHeight / 2);
+            Point targetCenter = new Point(targetX + targetWidth / 2, targetY + targetHeight / 2);
 
-            double targetWidth =
-                target.ActualWidth;
-
-            double targetHeight =
-                target.ActualHeight;
-
-
-            Point sourceCenter =
-                new Point(
-                    sourceX + sourceWidth / 2,
-                    sourceY + sourceHeight / 2);
-
-
-            Point targetCenter =
-                new Point(
-                    targetX + targetWidth / 2,
-                    targetY + targetHeight / 2);
-
-
-            double dx =
-                targetCenter.X -
-                sourceCenter.X;
-
-
-            double dy =
-                targetCenter.Y -
-                sourceCenter.Y;
+            double dx = targetCenter.X - sourceCenter.X;
+            double dy = targetCenter.Y - sourceCenter.Y;
 
 
             /*
@@ -960,17 +809,11 @@
             {
                 if (dx >= 0)
                 {
-                    return new Point(
-                        sourceX + sourceWidth,
-                        sourceCenter.Y);
+                    return new Point(sourceX + sourceWidth, sourceCenter.Y);
                 }
 
-
-                return new Point(
-                    sourceX,
-                    sourceCenter.Y);
+                return new Point(sourceX, sourceCenter.Y);
             }
-
 
             /*
              * Ansonsten verwenden wir oben/unten.
@@ -978,31 +821,21 @@
 
             if (dy >= 0)
             {
-                return new Point(
-                    sourceCenter.X,
-                    sourceY + sourceHeight);
+                return new Point(sourceCenter.X, sourceY + sourceHeight);
             }
 
-
-            return new Point(
-                sourceCenter.X,
-                sourceY);
+            return new Point(sourceCenter.X, sourceY);
         }
 
-        private Grid? FindShape(
-    Guid id)
+        private Grid? FindShape(Guid id)
         {
-            foreach (UIElement element
-                     in WhiteBoardCanvas.Children)
+            foreach (UIElement element in WhiteBoardCanvas.Children)
             {
-                if (element is Grid grid &&
-                    grid.Tag is ShapeElement model &&
-                    model.Id == id)
+                if (element is Grid grid && grid.Tag is ShapeElement model && model.Id == id)
                 {
                     return grid;
                 }
             }
-
 
             return null;
         }
@@ -1013,8 +846,7 @@
 
             _arrowSourceShape = null;
 
-            StatusText.Text =
-                "Pfeilerstellung abgebrochen";
+            StatusText.Text = "Pfeilerstellung abgebrochen";
         }
 
         private void UpdateArrows()
@@ -1025,45 +857,27 @@
                 if (element is System.Windows.Shapes.Path path &&
                     path.Tag is ArrowElement arrow)
                 {
-                    UpdateArrowPath(
-                        path,
-                        arrow);
+                    UpdateArrowPath(path, arrow);
                 }
             }
         }
 
-        private void UpdateArrowPath(
-    System.Windows.Shapes.Path path,
-    ArrowElement arrow)
+        private void UpdateArrowPath(System.Windows.Shapes.Path path, ArrowElement arrow)
         {
-            Grid? sourceShape =
-                FindShape(arrow.SourceId);
+            Grid? sourceShape = FindShape(arrow.SourceId);
 
-            Grid? targetShape =
-                FindShape(arrow.TargetId);
+            Grid? targetShape = FindShape(arrow.TargetId);
 
 
-            if (sourceShape == null ||
-                targetShape == null)
+            if (sourceShape == null || targetShape == null)
             {
                 return;
             }
 
+            Point start = GetConnectionPoint(sourceShape, targetShape);
+            Point end = GetConnectionPoint(targetShape, sourceShape);
 
-            Point start =
-                GetConnectionPoint(
-                    sourceShape,
-                    targetShape);
-
-
-            Point end =
-                GetConnectionPoint(
-                    targetShape,
-                    sourceShape);
-
-
-            Vector direction =
-                end - start;
+            Vector direction = end - start;
 
 
             if (direction.Length < 1)
@@ -1072,82 +886,156 @@
 
             direction.Normalize();
 
-
-            Vector perpendicular =
-                new Vector(
-                    -direction.Y,
-                    direction.X);
-
+            Vector perpendicular = new Vector(direction.Y, direction.X);
 
             const double arrowLength = 12;
 
             const double arrowWidth = 6;
 
-
-            Point arrowBase =
-                end -
-                direction * arrowLength;
+            Point arrowBase = end - direction * arrowLength;
 
 
-            Point left =
-                arrowBase +
-                perpendicular * arrowWidth;
+            Point left = arrowBase + perpendicular * arrowWidth;
 
 
-            Point right =
-                arrowBase -
-                perpendicular * arrowWidth;
+            Point right = arrowBase - perpendicular * arrowWidth;
 
 
-            var geometry =
-                new StreamGeometry();
+            var geometry = new StreamGeometry();
 
 
-            using (StreamGeometryContext context =
-                   geometry.Open())
+            using (StreamGeometryContext context = geometry.Open())
             {
-                context.BeginFigure(
-                    start,
-                    false,
-                    false);
+                context.BeginFigure(start, false, false);
 
-                context.LineTo(
-                    arrowBase,
-                    true,
-                    false);
+                context.LineTo(arrowBase, true, false);
 
 
-                context.BeginFigure(
-                    left,
-                    true,
-                    true);
+                context.BeginFigure(left, true, true);
 
-                context.LineTo(
-                    end,
-                    true,
-                    false);
+                context.LineTo(end, true, false);
 
-                context.LineTo(
-                    right,
-                    true,
-                    false);
+                context.LineTo( right, true, false);
             }
 
 
             geometry.Freeze();
 
 
-            path.Data =
-                geometry;
+            path.Data = geometry;
         }
+
+        private ContextMenu CreateArrowContextMenu()
+        {
+            var contextMenu = new ContextMenu();
+
+
+            var deleteItem = new MenuItem
+            {
+                Header = "Pfeil löschen"
+            };
+
+
+            deleteItem.Click += ArrowDelete_Click;
+
+
+            contextMenu.Items.Add(deleteItem);
+
+
+            return contextMenu;
+        }
+
+        private void ArrowDelete_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+
+            if (menuItem.Parent is not ContextMenu contextMenu)
+                return;
+
+
+            if (contextMenu.PlacementTarget is not System.Windows.Shapes.Path path)
+            {
+                return;
+            }
+
+
+            if (path.Tag is not ArrowElement arrow)
+                return;
+
+
+            _arrows.Remove(arrow);
+
+
+            WhiteBoardCanvas.Children.Remove(
+                path);
+
+
+            if (_selectedArrow == path)
+            {
+                _selectedArrow = null;
+            }
+
+
+            StatusText.Text = "Pfeil gelöscht";
+        }
+
+        private void SelectArrow(System.Windows.Shapes.Path? arrow)
+        {
+            // --------------------------------------------------------
+            // Alte Pfeilauswahl entfernen
+            // --------------------------------------------------------
+
+            if (_selectedArrow != null)
+            {
+                SetArrowSelectedVisual(_selectedArrow, false);
+            }
+
+
+            // --------------------------------------------------------
+            // Neue Pfeilauswahl
+            // --------------------------------------------------------
+
+            _selectedArrow = arrow;
+
+
+            if (_selectedArrow != null)
+            {
+                SetArrowSelectedVisual(_selectedArrow, true);
+            }
+        }
+
+        private void SetArrowSelectedVisual(System.Windows.Shapes.Path arrow, bool selected)
+        {
+            arrow.Stroke = selected ? Brushes.DodgerBlue : Brushes.DimGray;
+
+            arrow.Fill = selected ? Brushes.DodgerBlue : Brushes.DimGray;
+
+            arrow.StrokeThickness = selected ? 3 : 2;
+        }
+
+        private void Arrow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not System.Windows.Shapes.Path arrow)
+                return;
+
+
+            SelectArrow(arrow);
+
+
+            StatusText.Text = "Pfeil ausgewählt";
+
+
+            e.Handled = true;
+        }
+
 
         // ============================================================
         // Shape bewegen
         // ============================================================
 
-        private void Shape_PreviewMouseMove(
-            object sender,
-            MouseEventArgs e)
+        private void Shape_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (!_isDragging)
                 return;
@@ -1156,36 +1044,27 @@
                 return;
 
 
-            Point currentMousePosition =
-                e.GetPosition(WhiteBoardCanvas);
+            Point currentMousePosition = e.GetPosition(WhiteBoardCanvas);
 
 
-            double deltaX =
-                currentMousePosition.X -
+            double deltaX = currentMousePosition.X -
                 _dragStartMousePosition.X;
 
-            double deltaY =
-                currentMousePosition.Y -
+            double deltaY = currentMousePosition.Y -
                 _dragStartMousePosition.Y;
 
 
-            double newX =
-                _dragStartShapeX + deltaX;
+            double newX = _dragStartShapeX + deltaX;
 
-            double newY =
-                _dragStartShapeY + deltaY;
+            double newY = _dragStartShapeY + deltaY;
 
 
             /*
              * Shape bewegen.
              */
-            Canvas.SetLeft(
-                shape,
-                newX);
+            Canvas.SetLeft(shape, newX);
 
-            Canvas.SetTop(
-                shape,
-                newY);
+            Canvas.SetTop(shape, newY);
 
 
             /*
@@ -1198,8 +1077,7 @@
             }
 
 
-            StatusText.Text =
-                $"Shape: X={newX:0}, Y={newY:0}";
+            StatusText.Text = $"Shape: X={newX:0}, Y={newY:0}";
 
 
             e.Handled = true;
@@ -1210,9 +1088,7 @@
         // Dragging beenden
         // ============================================================
 
-        private void Shape_PreviewMouseLeftButtonUp(
-            object sender,
-            MouseButtonEventArgs e)
+        private void Shape_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (sender is not Grid shape)
                 return;
@@ -1233,9 +1109,7 @@
 
             if (shape.Tag is ShapeElement model)
             {
-                StatusText.Text =
-                    $"Shape positioniert: " +
-                    $"X={model.X:0}, Y={model.Y:0}";
+                StatusText.Text = $"Shape positioniert: X={model.X:0}, Y={model.Y:0}";
             }
 
 
@@ -1246,9 +1120,7 @@
         // Resize gestartet
         // ============================================================
 
-        private void ResizeThumb_DragStarted(
-            object sender,
-            DragStartedEventArgs e)
+        private void ResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
         {
             if (sender is not Thumb thumb)
                 return;
@@ -1262,31 +1134,22 @@
 
             SelectShape(shape);
 
-
             _isResizing = true;
 
             _resizeDirection = direction;
 
+            _resizeStartMousePosition = Mouse.GetPosition(WhiteBoardCanvas);
 
-            _resizeStartMousePosition =
-                Mouse.GetPosition(WhiteBoardCanvas);
+            _resizeStartX = Canvas.GetLeft(shape);
 
+            _resizeStartY = Canvas.GetTop(shape);
 
-            _resizeStartX =
-                Canvas.GetLeft(shape);
+            _resizeStartWidth = shape.ActualWidth;
 
-            _resizeStartY =
-                Canvas.GetTop(shape);
-
-            _resizeStartWidth =
-                shape.ActualWidth;
-
-            _resizeStartHeight =
-                shape.ActualHeight;
+            _resizeStartHeight = shape.ActualHeight;
 
 
-            StatusText.Text =
-                "Größe ändern";
+            StatusText.Text = "Größe ändern";
         }
 
 
@@ -1294,9 +1157,7 @@
         // Resize
         // ============================================================
 
-        private void ResizeThumb_DragDelta(
-            object sender,
-            DragDeltaEventArgs e)
+        private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
             if (!_isResizing)
                 return;
@@ -1308,114 +1169,77 @@
                 return;
 
 
-            Point currentMousePosition =
-                Mouse.GetPosition(WhiteBoardCanvas);
+            Point currentMousePosition = Mouse.GetPosition(WhiteBoardCanvas);
 
 
-            double deltaX =
-                currentMousePosition.X -
-                _resizeStartMousePosition.X;
+            double deltaX = currentMousePosition.X - _resizeStartMousePosition.X;
 
-            double deltaY =
-                currentMousePosition.Y -
-                _resizeStartMousePosition.Y;
+            double deltaY = currentMousePosition.Y - _resizeStartMousePosition.Y;
 
 
-            double newX =
-                _resizeStartX;
+            double newX = _resizeStartX;
 
-            double newY =
-                _resizeStartY;
+            double newY = _resizeStartY;
 
-            double newWidth =
-                _resizeStartWidth;
+            double newWidth = _resizeStartWidth;
 
-            double newHeight =
-                _resizeStartHeight;
+            double newHeight = _resizeStartHeight;
 
 
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Left))
+            if (_resizeDirection.HasFlag(ResizeDirection.Left))
             {
-                newWidth =
-                    _resizeStartWidth - deltaX;
+                newWidth = _resizeStartWidth - deltaX;
 
                 if (newWidth < MinimumShapeWidth)
                 {
-                    newWidth =
-                        MinimumShapeWidth;
+                    newWidth = MinimumShapeWidth;
 
-                    newX =
-                        _resizeStartX +
-                        (_resizeStartWidth -
-                         MinimumShapeWidth);
+                    newX = _resizeStartX + (_resizeStartWidth - MinimumShapeWidth);
                 }
                 else
                 {
-                    newX =
-                        _resizeStartX + deltaX;
+                    newX = _resizeStartX + deltaX;
                 }
             }
 
 
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Right))
+            if (_resizeDirection.HasFlag(ResizeDirection.Right))
             {
-                newWidth =
-                    Math.Max(
-                        MinimumShapeWidth,
-                        _resizeStartWidth + deltaX);
+                newWidth = Math.Max(MinimumShapeWidth, _resizeStartWidth + deltaX);
             }
 
 
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Top))
+            if (_resizeDirection.HasFlag(ResizeDirection.Top))
             {
-                newHeight =
-                    _resizeStartHeight - deltaY;
+                newHeight = _resizeStartHeight - deltaY;
 
                 if (newHeight < MinimumShapeHeight)
                 {
-                    newHeight =
-                        MinimumShapeHeight;
+                    newHeight = MinimumShapeHeight;
 
-                    newY =
-                        _resizeStartY +
-                        (_resizeStartHeight -
-                         MinimumShapeHeight);
+                    newY = _resizeStartY + (_resizeStartHeight - MinimumShapeHeight);
                 }
                 else
                 {
-                    newY =
-                        _resizeStartY + deltaY;
+                    newY = _resizeStartY + deltaY;
                 }
             }
 
 
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Bottom))
+            if (_resizeDirection.HasFlag(ResizeDirection.Bottom))
             {
-                newHeight =
-                    Math.Max(
-                        MinimumShapeHeight,
-                        _resizeStartHeight + deltaY);
+                newHeight = Math.Max(MinimumShapeHeight, _resizeStartHeight + deltaY);
             }
 
 
-            shape.Width =
-                newWidth;
+            shape.Width = newWidth;
 
-            shape.Height =
-                newHeight;
+            shape.Height = newHeight;
 
 
-            Canvas.SetLeft(
-                shape,
-                newX);
+            Canvas.SetLeft(shape, newX);
 
-            Canvas.SetTop(
-                shape,
-                newY);
+            Canvas.SetTop(shape, newY);
 
 
             if (shape.Tag is ShapeElement model)
@@ -1429,9 +1253,7 @@
 
             UpdateArrows();
 
-            StatusText.Text =
-                $"Größe: " +
-                $"{newWidth:0} x {newHeight:0}";
+            StatusText.Text = $"Größe: {newWidth:0} x {newHeight:0}";
         }
 
 
@@ -1439,9 +1261,7 @@
         // Resize beendet
         // ============================================================
 
-        private void ResizeThumb_DragCompleted(
-            object sender,
-            DragCompletedEventArgs e)
+        private void ResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             _isResizing = false;
 
@@ -1450,16 +1270,11 @@
                 thumb.Parent is Grid shape &&
                 shape.Tag is ShapeElement model)
             {
-                StatusText.Text =
-                    $"Shape-Größe: " +
-                    $"{model.Width:0} x " +
-                    $"{model.Height:0}";
+                StatusText.Text = $"Shape-Größe: {model.Width:0} x {model.Height:0}";
             }
         }
 
-        private void AddRectangle_Click(
-    object sender,
-    RoutedEventArgs e)
+        private void AddRectangle_Click(object sender, RoutedEventArgs e)
         {
             AddShape(ShapeType.Rectangle);
         }
@@ -1473,23 +1288,18 @@
         }
 
 
-        private void AddEllipse_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddEllipse_Click(object sender, RoutedEventArgs e)
         {
             AddShape(ShapeType.Ellipse);
         }
 
 
-        private void AddDiamond_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddDiamond_Click(object sender, RoutedEventArgs e)
         {
             AddShape(ShapeType.Diamond);
         }
 
-        private void AddShape(
-    ShapeType shapeType)
+        private void AddShape(ShapeType shapeType)
         {
             var shape = new ShapeElement
             {
@@ -1505,48 +1315,34 @@
             };
 
 
-            var control =
-                CreateShapeControl(shape);
+            var control = CreateShapeControl(shape);
 
-
-            WhiteBoardCanvas.Children.Add(
-                control);
-
+            WhiteBoardCanvas.Children.Add(control);
 
             SelectShape(control);
 
-
-            StatusText.Text =
-                $"{GetShapeName(shapeType)} erstellt";
-
+            StatusText.Text =  $"{GetShapeName(shapeType)} erstellt";
 
             WhiteBoardContextMenu.IsOpen = false;
         }
 
-        private string GetShapeName(
-    ShapeType shapeType)
+        private string GetShapeName(ShapeType shapeType)
         {
             return shapeType switch
             {
-                ShapeType.Rectangle =>
-                    "Rechteck",
+                ShapeType.Rectangle => "Rechteck",
 
-                ShapeType.RoundedRectangle =>
-                    "Abgerundetes Rechteck",
+                ShapeType.RoundedRectangle => "Abgerundetes Rechteck",
 
-                ShapeType.Ellipse =>
-                    "Ellipse",
+                ShapeType.Ellipse => "Ellipse",
 
-                ShapeType.Diamond =>
-                    "Raute",
+                ShapeType.Diamond => "Raute",
 
-                _ =>
-                    "Shape"
+                _ => "Shape"
             };
         }
 
-        private FrameworkElement CreateShapeVisual(
-    ShapeElement shape)
+        private FrameworkElement CreateShapeVisual(ShapeElement shape)
         {
             switch (shape.ShapeType)
             {
@@ -1612,21 +1408,19 @@
                         {
                             Fill = Brushes.White,
 
-                            Stroke =
-                                Brushes.DimGray,
+                            Stroke = Brushes.DimGray,
 
                             StrokeThickness = 2,
 
                             Points = new PointCollection
-                {
-                    new Point(0.5, 0),
-                    new Point(1, 0.5),
-                    new Point(0.5, 1),
-                    new Point(0, 0.5)
-                },
+                                        {
+                                            new Point(0.5, 0),
+                                            new Point(1, 0.5),
+                                            new Point(0.5, 1),
+                                            new Point(0, 0.5)
+                                        },
 
-                            Stretch =
-                                Stretch.Fill,
+                            Stretch = Stretch.Fill,
 
                             IsHitTestVisible = true
                         };
@@ -1638,43 +1432,27 @@
             }
         }
 
-        private void SetShapeSelectedVisual(
-    Grid shape,
-    bool selected)
+        private void SetShapeSelectedVisual(Grid shape, bool selected)
         {
             if (shape.Children.Count == 0)
                 return;
 
 
-            if (shape.Children[0]
-                is Border border)
+            if (shape.Children[0] is Border border)
             {
-                border.BorderBrush =
-                    selected
-                        ? Brushes.DodgerBlue
-                        : Brushes.DimGray;
+                border.BorderBrush = selected ? Brushes.DodgerBlue : Brushes.DimGray;
 
-                border.BorderThickness =
-                    selected
-                        ? new Thickness(3)
-                        : new Thickness(2);
+                border.BorderThickness = selected ? new Thickness(3) : new Thickness(2);
 
                 return;
             }
 
 
-            if (shape.Children[0]
-                is System.Windows.Shapes.Shape vectorShape)
+            if (shape.Children[0] is System.Windows.Shapes.Shape vectorShape)
             {
-                vectorShape.Stroke =
-                    selected
-                        ? Brushes.DodgerBlue
-                        : Brushes.DimGray;
+                vectorShape.Stroke = selected ? Brushes.DodgerBlue : Brushes.DimGray;
 
-                vectorShape.StrokeThickness =
-                    selected
-                        ? 3
-                        : 2;
+                vectorShape.StrokeThickness = selected ? 3 : 2;
             }
         }
 
@@ -1682,22 +1460,21 @@
         // Auswahl
         // ============================================================
 
-        private void SelectShape(
-            Grid? shape)
+        private void SelectShape(Grid? shape)
         {
-            // --------------------------------------------------------
+            // Pfeilauswahl aufheben
+            if (_selectedArrow != null)
+            {
+                SelectArrow(null);
+            }
+
             // Alte Auswahl entfernen
-            // --------------------------------------------------------
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    false);
+                SetShapeSelectedVisual(_selectedShape, false);
 
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Collapsed);
+                SetResizeHandlesVisibility(_selectedShape, Visibility.Collapsed);
             }
 
 
@@ -1710,18 +1487,11 @@
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    true);
+                SetShapeSelectedVisual(_selectedShape, true);
 
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Visible);
+                SetResizeHandlesVisibility(_selectedShape, Visibility.Visible);
 
-
-                Panel.SetZIndex(
-                    _selectedShape,
-                    GetHighestZIndex() + 1);
+                Panel.SetZIndex(_selectedShape, GetHighestZIndex() + 1);
             }
         }
 
@@ -1729,17 +1499,13 @@
         // Resize-Griffe anzeigen/verstecken
         // ============================================================
 
-        private void SetResizeHandlesVisibility(
-            Grid shape,
-            Visibility visibility)
+        private void SetResizeHandlesVisibility(Grid shape, Visibility visibility)
         {
-            foreach (UIElement child
-                     in shape.Children)
+            foreach (UIElement child in shape.Children)
             {
                 if (child is Thumb thumb)
                 {
-                    thumb.Visibility =
-                        visibility;
+                    thumb.Visibility = visibility;
                 }
             }
         }
@@ -1753,11 +1519,9 @@
         {
             int highest = 0;
 
-            foreach (UIElement element
-                     in WhiteBoardCanvas.Children)
+            foreach (UIElement element in WhiteBoardCanvas.Children)
             {
-                int zIndex =
-                    Panel.GetZIndex(element);
+                int zIndex = Panel.GetZIndex(element);
 
                 if (zIndex > highest)
                     highest = zIndex;
@@ -1771,9 +1535,7 @@
         // Neues Board
         // ============================================================
 
-        private void NewBoard_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void NewBoard_Click( object sender, RoutedEventArgs e)
         {
             if (WhiteBoardCanvas.Children.Count > 0)
             {
@@ -1792,8 +1554,7 @@
 
             ClearBoard();
 
-            StatusText.Text =
-                "Neues Whiteboard erstellt";
+            StatusText.Text = "Neues Whiteboard erstellt";
         }
 
 
@@ -1801,9 +1562,7 @@
         // Beenden
         // ============================================================
 
-        private void Exit_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
@@ -1813,28 +1572,20 @@
         // Löschen
         // ============================================================
 
-        private void Delete_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void Delete_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedShape == null)
             {
-                StatusText.Text =
-                    "Kein Shape ausgewählt";
+                StatusText.Text = "Kein Shape ausgewählt";
 
                 return;
             }
 
-
-            WhiteBoardCanvas.Children.Remove(
-                _selectedShape);
-
+            WhiteBoardCanvas.Children.Remove( _selectedShape);
 
             _selectedShape = null;
 
-
-            StatusText.Text =
-                "Shape gelöscht";
+            StatusText.Text = "Shape gelöscht";
         }
 
 
@@ -1842,25 +1593,19 @@
         // Board leeren
         // ============================================================
 
-        private void ClearBoard_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void ClearBoard_Click(object sender, RoutedEventArgs e)
         {
             ClearBoard();
 
-            StatusText.Text =
-                "Whiteboard geleert";
+            StatusText.Text = "Whiteboard geleert";
         }
 
 
-        private void ResetBoard_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void ResetBoard_Click(object sender, RoutedEventArgs e)
         {
             ClearBoard();
 
-            StatusText.Text =
-                "Whiteboard zurückgesetzt";
+            StatusText.Text = "Whiteboard zurückgesetzt";
         }
 
 
@@ -1873,6 +1618,8 @@
             _editingTextBox = null;
 
             _selectedShape = null;
+
+            _selectedArrow = null;
 
             _isCreatingArrow = false;
 
@@ -1887,9 +1634,7 @@
         // Contextmenü
         // ============================================================
 
-        private void CloseContextMenu_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void CloseContextMenu_Click(object sender, RoutedEventArgs e)
         {
             WhiteBoardContextMenu.IsOpen = false;
         }
@@ -1899,9 +1644,7 @@
         // Text - noch kein eigenständiges Element
         // ============================================================
 
-        private void AddText_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddText_Click(object sender, RoutedEventArgs e)
         {
             ShowNotImplemented(
                 "Text",
@@ -1914,9 +1657,7 @@
         // Pfeil
         // ============================================================
 
-        private void AddArrow_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddArrow_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedShape == null)
             {
@@ -1939,8 +1680,7 @@
             WhiteBoardContextMenu.IsOpen = false;
 
 
-            StatusText.Text =
-                "Pfeil: Ziel-Shape auswählen";
+            StatusText.Text = "Pfeil: Ziel-Shape auswählen";
         }
 
 
@@ -1948,18 +1688,11 @@
         // Noch nicht implementiert
         // ============================================================
 
-        private void ShowNotImplemented(
-            string elementName,
-            string message)
+        private void ShowNotImplemented(string elementName,string message)
         {
-            MessageBox.Show(
-                message,
-                elementName,
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            MessageBox.Show(message, elementName, MessageBoxButton.OK, MessageBoxImage.Information);
 
-            StatusText.Text =
-                $"{elementName}: Funktion folgt später";
+            StatusText.Text = $"{elementName}: Funktion folgt später";
         }
 
 
