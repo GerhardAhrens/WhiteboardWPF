@@ -11,6 +11,7 @@
     using Microsoft.Win32;
 
     using WhiteboardWPF.Models;
+    using WhiteboardWPF.ShapeProvider;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -32,7 +33,7 @@
         private const double MinimumShapeHeight = 30;
         private bool _isResizing;
         private ResizeDirection _resizeDirection;
-        private Point _resizeStartMousePosition;
+        //private Point _resizeStartMousePosition;
         private double _resizeStartX;
         private double _resizeStartY;
         private double _resizeStartWidth;
@@ -64,8 +65,8 @@
 
         public MainWindow()
         {
-            InitializeComponent();
-
+            this.InitializeComponent();
+            this.InitializeShapeMenu();
             StatusText.Text = "Whiteboard bereit";
         }
 
@@ -213,8 +214,7 @@
             // Shape
             // --------------------------------------------------------
 
-            var shapeVisual =
-                CreateShapeVisual(shape);
+            var shapeVisual = CreateShapeVisual(shape);
 
             grid.Children.Add(shapeVisual);
 
@@ -560,9 +560,10 @@
             // Resize-Griffe
             // ========================================================
 
-            if (e.OriginalSource is Thumb)
+            if (IsResizeThumbSource(e.OriginalSource as DependencyObject))
+            {
                 return;
-
+            }
 
             // ========================================================
             // Doppelklick auf Text
@@ -713,17 +714,8 @@
             }
 
 
-            Point start =
-                GetConnectionPoint(
-                    sourceShape,
-                    targetShape);
-
-
-            Point end =
-                GetConnectionPoint(
-                    targetShape,
-                    sourceShape);
-
+            Point start = GetConnectionPoint(sourceShape, targetShape);
+            Point end = GetConnectionPoint(targetShape, sourceShape);
 
             var path =
                 new System.Windows.Shapes.Path
@@ -781,9 +773,7 @@
             SelectArrow(arrow);
         }
 
-        private Point GetConnectionPoint(
-            Grid source,
-            Grid target)
+        private Point GetConnectionPoint(Grid source, Grid target)
         {
             if (source.Tag is not ShapeElement sourceModel)
                 return new Point();
@@ -811,9 +801,7 @@
                         targetModel.Height / 2);
 
 
-            Vector direction =
-                targetCenter -
-                sourceCenter;
+            Vector direction = targetCenter - sourceCenter;
 
 
             if (direction.Length < 0.001)
@@ -825,32 +813,17 @@
 
             return sourceModel.ShapeType switch
             {
-                ShapeType.Rectangle =>
-                    GetRectangleConnectionPoint(
-                        sourceModel,
-                        sourceCenter,
-                        direction),
+                ShapeType.Rectangle => GetRectangleConnectionPoint(sourceModel, sourceCenter, direction),
 
-                ShapeType.RoundedRectangle =>
-                    GetRectangleConnectionPoint(
-                        sourceModel,
-                        sourceCenter,
-                        direction),
+                ShapeType.RoundedRectangle => GetRectangleConnectionPoint(sourceModel, sourceCenter, direction),
 
-                ShapeType.Ellipse =>
-                    GetEllipseConnectionPoint(
-                        sourceModel,
-                        sourceCenter,
-                        direction),
+                ShapeType.Ellipse => GetEllipseConnectionPoint(sourceModel, sourceCenter, direction),
 
-                ShapeType.Diamond =>
-                    GetDiamondConnectionPoint(
-                        sourceModel,
-                        sourceCenter,
-                        direction),
+                ShapeType.Diamond => GetDiamondConnectionPoint(sourceModel, sourceCenter, direction),
 
-                _ =>
-                    sourceCenter
+                ShapeType.Triangle => GetTriangleConnectionPoint(sourceModel, sourceCenter, direction),
+
+                _ => sourceCenter
             };
         }
 
@@ -890,10 +863,7 @@
                    direction * scale;
         }
 
-        private Point GetEllipseConnectionPoint(
-            ShapeElement shape,
-            Point center,
-            Vector direction)
+        private Point GetEllipseConnectionPoint(ShapeElement shape, Point center, Vector direction)
         {
             double radiusX =
                 shape.Width / 2;
@@ -925,10 +895,7 @@
                    direction * scale;
         }
 
-        private Point GetDiamondConnectionPoint(
-            ShapeElement shape,
-            Point center,
-            Vector direction)
+        private Point GetDiamondConnectionPoint(ShapeElement shape, Point center, Vector direction)
         {
             double halfWidth =
                 shape.Width / 2;
@@ -968,6 +935,166 @@
                 direction);
         }
         */
+
+        private Point GetTriangleConnectionPoint(
+    ShapeElement shape,
+    Point center,
+    Vector direction)
+        {
+            if (direction.Length < 0.001)
+                return center;
+
+
+            direction.Normalize();
+
+
+            // --------------------------------------------------------
+            // Eckpunkte des Dreiecks
+            //
+            //              Top
+            //               /\
+            //              /  \
+            //             /    \
+            //            /      \
+            //           /________\
+            //      BottomLeft   BottomRight
+            // --------------------------------------------------------
+
+            Point top =
+                new Point(
+                    shape.X +
+                        shape.Width / 2,
+
+                    shape.Y);
+
+
+            Point bottomLeft =
+                new Point(
+                    shape.X,
+
+                    shape.Y +
+                        shape.Height);
+
+
+            Point bottomRight =
+                new Point(
+                    shape.X +
+                        shape.Width,
+
+                    shape.Y +
+                        shape.Height);
+
+
+            Point rayEnd =
+                center +
+                direction * 10000;
+
+
+            Point? intersection;
+
+
+            // --------------------------------------------------------
+            // Linke Seite
+            // --------------------------------------------------------
+
+            intersection = GetLineIntersection(center, rayEnd, top, bottomLeft);
+
+            if (intersection.HasValue)
+                return intersection.Value;
+
+
+            // --------------------------------------------------------
+            // Rechte Seite
+            // --------------------------------------------------------
+
+            intersection =
+                GetLineIntersection(
+                    center,
+                    rayEnd,
+                    top,
+                    bottomRight);
+
+            if (intersection.HasValue)
+                return intersection.Value;
+
+
+            // --------------------------------------------------------
+            // Untere Seite
+            // --------------------------------------------------------
+
+            intersection =
+                GetLineIntersection(
+                    center,
+                    rayEnd,
+                    bottomLeft,
+                    bottomRight);
+
+            if (intersection.HasValue)
+                return intersection.Value;
+
+
+            return center;
+        }
+
+        private Point? GetLineIntersection(Point line1Start, Point line1End, Point line2Start, Point line2End)
+        {
+            double x1 = line1Start.X;
+            double y1 = line1Start.Y;
+
+            double x2 = line1End.X;
+            double y2 = line1End.Y;
+
+            double x3 = line2Start.X;
+            double y3 = line2Start.Y;
+
+            double x4 = line2End.X;
+            double y4 = line2End.Y;
+
+
+            double denominator =
+                (x1 - x2) * (y3 - y4)
+                -
+                (y1 - y2) * (x3 - x4);
+
+
+            if (Math.Abs(denominator) < 0.000001)
+                return null;
+
+
+            double t =
+                ((x1 - x3) * (y3 - y4)
+                -
+                (y1 - y3) * (x3 - x4))
+                /
+                denominator;
+
+
+            double u =
+                -(
+                    (x1 - x2) * (y1 - y3)
+                    -
+                    (y1 - y2) * (x1 - x3)
+                )
+                /
+                denominator;
+
+
+            if (t < 0 ||
+                t > 1 ||
+                u < 0 ||
+                u > 1)
+            {
+                return null;
+            }
+
+
+            return new Point(
+                x1 +
+                    t * (x2 - x1),
+
+                y1 +
+                    t * (y2 - y1));
+        }
 
         private Grid? FindShape(Guid id)
         {
@@ -1252,15 +1379,17 @@
         // Shape bewegen
         // ============================================================
 
-        private void Shape_PreviewMouseMove(
-            object sender,
-            MouseEventArgs e)
+        private void Shape_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (sender is not Grid shape)
                 return;
 
 
             if (!_isDragging)
+                return;
+
+
+            if (_isResizing)
                 return;
 
 
@@ -1285,7 +1414,9 @@
 
             if (_selectedShapes.Count > 1)
             {
-                MoveSelectedShapes(deltaX, deltaY);
+                MoveSelectedShapes(
+                    deltaX,
+                    deltaY);
 
                 e.Handled = true;
 
@@ -1344,6 +1475,10 @@
                 return;
 
 
+            if (_isResizing)
+                return;
+
+
             if (!_isDragging)
                 return;
 
@@ -1359,14 +1494,16 @@
 
             _multiDragStartPositions.Clear();
 
+
             if (shape.Tag is ShapeElement model)
             {
-                StatusText.Text = $"Shape positioniert: X={model.X:0}, Y={model.Y:0}";
+                StatusText.Text = $"Shape positioniert: " + $"X={model.X:0}, " + $"Y={model.Y:0}";
             }
 
 
             e.Handled = true;
         }
+
 
         // ============================================================
         // Resize gestartet
@@ -1377,28 +1514,39 @@
             if (sender is not Thumb thumb)
                 return;
 
+
             if (thumb.Parent is not Grid shape)
                 return;
+
 
             if (thumb.Tag is not ResizeDirection direction)
                 return;
 
 
+            if (shape.Tag is not ShapeElement model)
+                return;
+
+
             SelectShape(shape);
+
+            _isDragging = false;
 
             _isResizing = true;
 
             _resizeDirection = direction;
 
-            _resizeStartMousePosition = Mouse.GetPosition(WhiteBoardCanvas);
 
-            _resizeStartX = Canvas.GetLeft(shape);
+            // --------------------------------------------------------
+            // Ausgangswerte des Shapes merken
+            // --------------------------------------------------------
 
-            _resizeStartY = Canvas.GetTop(shape);
+            _resizeStartX = model.X;
 
-            _resizeStartWidth = shape.ActualWidth;
+            _resizeStartY = model.Y;
 
-            _resizeStartHeight = shape.ActualHeight;
+            _resizeStartWidth = model.Width;
+
+            _resizeStartHeight = model.Height;
 
 
             StatusText.Text = "Größe ändern";
@@ -1408,106 +1556,184 @@
         // ============================================================
         // Resize
         // ============================================================
-
-        private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        private void ResizeThumb_DragDelta(
+            object sender,
+            DragDeltaEventArgs e)
         {
             if (!_isResizing)
                 return;
 
+
             if (sender is not Thumb thumb)
                 return;
+
 
             if (thumb.Parent is not Grid shape)
                 return;
 
 
-            Point currentMousePosition = Mouse.GetPosition(WhiteBoardCanvas);
+            if (shape.Tag is not ShapeElement model)
+                return;
 
 
-            double deltaX = currentMousePosition.X - _resizeStartMousePosition.X;
+            // ========================================================
+            // Drag-Delta des Thumb verwenden
+            // ========================================================
 
-            double deltaY = currentMousePosition.Y - _resizeStartMousePosition.Y;
+            double deltaX =
+                e.HorizontalChange;
 
-
-            double newX = _resizeStartX;
-
-            double newY = _resizeStartY;
-
-            double newWidth = _resizeStartWidth;
-
-            double newHeight = _resizeStartHeight;
+            double deltaY =
+                e.VerticalChange;
 
 
-            if (_resizeDirection.HasFlag(ResizeDirection.Left))
+            double newX =
+                _resizeStartX;
+
+            double newY =
+                _resizeStartY;
+
+            double newWidth =
+                _resizeStartWidth;
+
+            double newHeight =
+                _resizeStartHeight;
+
+
+            // ========================================================
+            // Linke Seite
+            // ========================================================
+
+            if (_resizeDirection.HasFlag(
+                    ResizeDirection.Left))
             {
-                newWidth = _resizeStartWidth - deltaX;
+                newWidth =
+                    _resizeStartWidth - deltaX;
+
 
                 if (newWidth < MinimumShapeWidth)
                 {
-                    newWidth = MinimumShapeWidth;
+                    newWidth =
+                        MinimumShapeWidth;
 
-                    newX = _resizeStartX + (_resizeStartWidth - MinimumShapeWidth);
+                    newX =
+                        _resizeStartX +
+                        (_resizeStartWidth -
+                         MinimumShapeWidth);
                 }
                 else
                 {
-                    newX = _resizeStartX + deltaX;
+                    newX =
+                        _resizeStartX +
+                        deltaX;
                 }
             }
 
 
-            if (_resizeDirection.HasFlag(ResizeDirection.Right))
+            // ========================================================
+            // Rechte Seite
+            // ========================================================
+
+            if (_resizeDirection.HasFlag(
+                    ResizeDirection.Right))
             {
-                newWidth = Math.Max(MinimumShapeWidth, _resizeStartWidth + deltaX);
+                newWidth =
+                    Math.Max(
+                        MinimumShapeWidth,
+                        _resizeStartWidth + deltaX);
             }
 
 
-            if (_resizeDirection.HasFlag(ResizeDirection.Top))
+            // ========================================================
+            // Obere Seite
+            // ========================================================
+
+            if (_resizeDirection.HasFlag(
+                    ResizeDirection.Top))
             {
-                newHeight = _resizeStartHeight - deltaY;
+                newHeight =
+                    _resizeStartHeight - deltaY;
+
 
                 if (newHeight < MinimumShapeHeight)
                 {
-                    newHeight = MinimumShapeHeight;
+                    newHeight =
+                        MinimumShapeHeight;
 
-                    newY = _resizeStartY + (_resizeStartHeight - MinimumShapeHeight);
+                    newY =
+                        _resizeStartY +
+                        (_resizeStartHeight -
+                         MinimumShapeHeight);
                 }
                 else
                 {
-                    newY = _resizeStartY + deltaY;
+                    newY =
+                        _resizeStartY +
+                        deltaY;
                 }
             }
 
 
-            if (_resizeDirection.HasFlag(ResizeDirection.Bottom))
+            // ========================================================
+            // Untere Seite
+            // ========================================================
+
+            if (_resizeDirection.HasFlag(
+                    ResizeDirection.Bottom))
             {
-                newHeight = Math.Max(MinimumShapeHeight, _resizeStartHeight + deltaY);
+                newHeight =
+                    Math.Max(
+                        MinimumShapeHeight,
+                        _resizeStartHeight + deltaY);
             }
 
 
-            shape.Width = newWidth;
+            // ========================================================
+            // WPF-Control aktualisieren
+            // ========================================================
 
-            shape.Height = newHeight;
+            shape.Width =
+                newWidth;
+
+            shape.Height =
+                newHeight;
 
 
-            Canvas.SetLeft(shape, newX);
+            Canvas.SetLeft(
+                shape,
+                newX);
 
-            Canvas.SetTop(shape, newY);
+            Canvas.SetTop(
+                shape,
+                newY);
 
 
-            if (shape.Tag is ShapeElement model)
-            {
-                model.X = newX;
-                model.Y = newY;
+            // ========================================================
+            // Datenmodell aktualisieren
+            // ========================================================
 
-                model.Width = newWidth;
-                model.Height = newHeight;
-            }
+            model.X =
+                newX;
+
+            model.Y =
+                newY;
+
+            model.Width =
+                newWidth;
+
+            model.Height =
+                newHeight;
+
+
+            // ========================================================
+            // Pfeile aktualisieren
+            // ========================================================
 
             UpdateArrows();
 
+
             StatusText.Text = $"Größe: {newWidth:0} x {newHeight:0}";
         }
-
 
         // ============================================================
         // Resize beendet
@@ -1677,7 +1903,10 @@
                             IsHitTestVisible = true
                         };
                     }
-
+                case ShapeType.Triangle:
+                    {
+                        return CreateTriangleVisual(shape);
+                    }
 
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -2329,6 +2558,93 @@
 
             StatusText.Text = $"{_selectedShapes.Count} Shapes verschoben";
         }
+
+        // ============================================================
+        // Shape Contextmenu
+        // ============================================================
+        private void InitializeShapeMenu()
+        {
+            this.ShapeMenu.Items.Clear();
+
+
+            foreach (ShapeDefinition definition
+                     in ShapeDefinitionProvider.Definitions)
+            {
+                var item =
+                    new MenuItem
+                    {
+                        Header =
+                            definition.Name,
+
+                        Tag =
+                            definition.Type
+                    };
+
+
+                item.Click += AddShapeFromMenu_Click;
+
+
+                this.ShapeMenu.Items.Add(item);
+            }
+        }
+
+        private void AddShapeFromMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem item)
+                return;
+
+
+            if (item.Tag is not ShapeType shapeType)
+                return;
+
+
+            AddShape(shapeType);
+        }
+
+        // ============================================================
+        // Shape Definition Dreieck
+        // ============================================================
+
+        private FrameworkElement CreateTriangleVisual(ShapeElement shape)
+        {
+            return new System.Windows.Shapes.Polygon
+            {
+                Fill = Brushes.White,
+
+                Stroke = Brushes.DimGray,
+
+                StrokeThickness = 2,
+
+                Points = new PointCollection
+                    {
+                        new Point(0.5, 0),
+                        new Point(1, 1),
+                        new Point(0, 1)
+                    },
+
+                Stretch = Stretch.Fill,
+                IsHitTestVisible = true
+            };
+        }
+
+        // ============================================================
+        // Resize-Funktion
+        // ============================================================
+
+        private bool IsResizeThumbSource(DependencyObject? source)
+        {
+            while (source != null)
+            {
+                if (source is Thumb)
+                    return true;
+
+                source =
+                    VisualTreeHelper.GetParent(source);
+            }
+
+            return false;
+        }
+
 
         // ============================================================
         // Resize-Richtungen

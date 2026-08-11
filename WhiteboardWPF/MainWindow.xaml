@@ -107,7 +107,7 @@
 
                         <MenuItem Header="Neues Element">
 
-                            <MenuItem Header="Shape">
+                            <MenuItem x:Name="ShapeMenu" Header="Shape">
 
                                 <MenuItem Click="AddRectangle_Click" Header="Rechteck" />
 

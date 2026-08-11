@@ -5,6 +5,7 @@
         Rectangle,
         RoundedRectangle,
         Ellipse,
-        Diamond
+        Diamond,
+        Triangle
     }
 }
