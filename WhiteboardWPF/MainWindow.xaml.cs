@@ -1,16 +1,17 @@
 ﻿namespace WhiteboardWPF
 {
+    using System.IO;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
     using System.Windows.Input;
     using System.Windows.Media;
 
-    using System.Text.Json;
-    using System.Text.Json.Serialization;
+    using Microsoft.Win32;
 
     using WhiteboardWPF.Models;
-    using System.IO;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -1977,17 +1978,46 @@
         }
 
         // ============================================================
-        // JSON Optionen
+        // Laden und speichern
         // ============================================================
-        private JsonSerializerOptions CreateJsonOptions()
+        private void SaveBoard_Click(object sender, RoutedEventArgs e)
         {
-            return new JsonSerializerOptions
-            {
-                WriteIndented = true,
+            var dialog =
+                new SaveFileDialog
+                {
+                    Title =
+                        "Whiteboard speichern",
 
-                PropertyNamingPolicy =
-                    JsonNamingPolicy.CamelCase
-            };
+                    Filter =
+                        "Whiteboard (*.json)|*.json|" +
+                        "Alle Dateien (*.*)|*.*",
+
+                    DefaultExt =
+                        ".json",
+
+                    AddExtension =
+                        true
+                };
+
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+
+            try
+            {
+                SaveBoard(
+                    dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Das Whiteboard konnte nicht gespeichert werden.\n\n" +
+                    $"{ex.Message}",
+                    "Fehler beim Speichern",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private void SaveBoard(string fileName)
@@ -2020,8 +2050,7 @@
                 json);
 
 
-            StatusText.Text =
-                $"Board gespeichert: {fileName}";
+            StatusText.Text = $"Board gespeichert: {fileName}";
         }
 
         private List<ShapeElement> GetShapeModels()
@@ -2033,6 +2062,110 @@
                 .Select(grid =>
                     (ShapeElement)grid.Tag)
                 .ToList();
+        }
+
+        private void LoadBoard_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog =
+                new OpenFileDialog
+                {
+                    Title =
+                        "Whiteboard laden",
+
+                    Filter =
+                        "Whiteboard (*.json)|*.json|" +
+                        "Alle Dateien (*.*)|*.*",
+
+                    DefaultExt =
+                        ".json"
+                };
+
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+
+            try
+            {
+                LoadBoard(
+                    dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Die Whiteboard-Datei konnte nicht geladen werden.\n\n" +
+                    $"{ex.Message}",
+                    "Fehler beim Laden",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void LoadBoard(string fileName)
+        {
+            string json = File.ReadAllText(fileName);
+
+
+            var options = CreateJsonOptions();
+
+
+            var document = JsonSerializer.Deserialize<WhiteBoardDocument>(json, options);
+
+
+            if (document == null)
+                throw new InvalidOperationException("Die Whiteboard-Datei konnte nicht gelesen werden.");
+
+
+            ClearBoard();
+
+
+            foreach (ShapeElement shape in document.Shapes)
+            {
+                AddLoadedShape(shape);
+            }
+
+
+            foreach (ArrowElement arrow in document.Arrows)
+            {
+                _arrows.Add(arrow);
+            }
+
+
+            foreach (ArrowElement arrow in _arrows)
+            {
+                DrawArrow(arrow);
+            }
+
+            SelectShape(null);
+            SelectArrow(null);
+
+            StatusText.Text = $"Board geladen: {fileName}";
+        }
+
+        private void AddLoadedShape(ShapeElement shape)
+        {
+            var control = CreateShapeControl(shape);
+
+
+            Canvas.SetLeft(control, shape.X);
+            Canvas.SetTop(control, shape.Y);
+
+
+            WhiteBoardCanvas.Children.Add(control);
+        }
+
+        // ============================================================
+        // JSON Optionen
+        // ============================================================
+        private JsonSerializerOptions CreateJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                WriteIndented = true,
+
+                PropertyNamingPolicy =
+                    JsonNamingPolicy.CamelCase
+            };
         }
 
         // ============================================================

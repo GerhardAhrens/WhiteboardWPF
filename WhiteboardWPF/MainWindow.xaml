@@ -33,6 +33,11 @@
 
                 <Separator />
 
+                <MenuItem Click="LoadBoard_Click" Header="Laden" />
+                <MenuItem Click="SaveBoard_Click" Header="Speichern" />
+
+                <Separator />
+
                 <MenuItem Click="Exit_Click" Header="_Beenden" />
 
             </MenuItem>
@@ -119,7 +124,7 @@
                             <MenuItem Click="AddArrow_Click" Header="Pfeil" />
 
                         </MenuItem>
-                        
+
                         <Separator />
 
 
