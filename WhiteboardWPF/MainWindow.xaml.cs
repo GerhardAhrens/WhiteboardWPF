@@ -2,7 +2,6 @@
 {
     using System.IO;
     using System.Text.Json;
-    using System.Text.Json.Serialization;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
@@ -19,13 +18,9 @@
     public partial class MainWindow : Window
     {
         private Point _contextMenuPosition;
-
         private Grid? _selectedShape;
-
         private bool _isDragging;
-
         private Point _dragStartMousePosition;
-
         private double _dragStartShapeX;
         private double _dragStartShapeY;
 
@@ -33,20 +28,13 @@
         // ============================================================
         // Resize
         // ============================================================
-
         private const double MinimumShapeWidth = 40;
-
         private const double MinimumShapeHeight = 30;
-
         private bool _isResizing;
-
         private ResizeDirection _resizeDirection;
-
         private Point _resizeStartMousePosition;
-
         private double _resizeStartX;
         private double _resizeStartY;
-
         private double _resizeStartWidth;
         private double _resizeStartHeight;
 
@@ -54,9 +42,7 @@
         // ============================================================
         // Textbearbeitung
         // ============================================================
-
         private TextBox? _editingTextBox;
-
         private string _textBeforeEditing = string.Empty;
 
 
@@ -64,13 +50,17 @@
         // Pfeile
         // ============================================================
         private readonly List<ArrowElement> _arrows = new();
-
         private bool _isCreatingArrow;
-
         private Grid? _arrowSourceShape;
-        
+       
         private System.Windows.Shapes.Path? _selectedArrow;
 
+
+        // ============================================================
+        // Mehrfachmarkierung
+        // ============================================================
+        private readonly List<Grid> _selectedShapes = new();
+        private readonly Dictionary<Grid, Point> _multiDragStartPositions = new();
 
         public MainWindow()
         {
@@ -84,6 +74,12 @@
         // Whiteboard - rechte Maustaste
         // ============================================================
 
+        #region Klick Events 
+        /// <summary>
+        /// Whiteboard - rechte Maustaste
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void WhiteBoardCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             _contextMenuPosition = e.GetPosition(WhiteBoardCanvas);
@@ -91,21 +87,21 @@
             StatusText.Text = $"Position: X={_contextMenuPosition.X:0}, Y={_contextMenuPosition.Y:0}";
         }
 
-
-        // ============================================================
-        // Whiteboard - linke Maustaste
-        // ============================================================
-
+        /// <summary>
+        /// Whiteboard - linke Maustaste
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void WhiteBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             SelectShape(null);
         }
 
-
-        // ============================================================
-        // Shape erstellen
-        // ============================================================
-
+        /// <summary>
+        /// Shape erstellen
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void AddShape_Click(object sender, RoutedEventArgs e)
         {
             var shape = new ShapeElement
@@ -132,11 +128,76 @@
             WhiteBoardContextMenu.IsOpen = false;
         }
 
+        /// <summary>
+        /// Contextmenü für Shape
+        /// </summary>
+        /// <returns></returns>
+        private ContextMenu CreateShapeContextMenu()
+        {
+            var contextMenu = new ContextMenu();
+
+
+            var editTextItem = new MenuItem
+            {
+                Header = "Text bearbeiten"
+            };
+
+            editTextItem.Click += ShapeEditText_Click;
+
+            contextMenu.Items.Add(editTextItem);
+
+
+            return contextMenu;
+        }
+
+        /// <summary>
+        /// Text über Contextmenü bearbeiten
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ShapeEditText_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+            if (menuItem.Parent is not ContextMenu contextMenu)
+                return;
+
+            if (contextMenu.PlacementTarget is not Grid shape)
+                return;
+
+
+            SelectShape(shape);
+
+            BeginTextEditing(shape);
+        }
+
+        /// <summary>
+        /// Text über Doppelklick bearbeiten
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ShapeText_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not TextBox textBox)
+                return;
+
+            if (textBox.Parent is not Grid shape)
+                return;
+
+
+            SelectShape(shape);
+
+            BeginTextEditing(shape);
+
+            e.Handled = true;
+        }
+
+        #endregion Klick Events 
 
         // ============================================================
         // Shape-Control erzeugen
         // ============================================================
-
         private Grid CreateShapeControl(ShapeElement shape)
         {
             var grid = new Grid
@@ -227,80 +288,11 @@
         }
 
 
-        // ============================================================
-        // Contextmenü für Shape
-        // ============================================================
-
-        private ContextMenu CreateShapeContextMenu()
-        {
-            var contextMenu = new ContextMenu();
-
-
-            var editTextItem = new MenuItem
-            {
-                Header = "Text bearbeiten"
-            };
-
-            editTextItem.Click += ShapeEditText_Click;
-
-            contextMenu.Items.Add(editTextItem);
-
-
-            return contextMenu;
-        }
-
-
-        // ============================================================
-        // Text über Contextmenü bearbeiten
-        // ============================================================
-
-        private void ShapeEditText_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not MenuItem menuItem)
-                return;
-
-            if (menuItem.Parent is not ContextMenu contextMenu)
-                return;
-
-            if (contextMenu.PlacementTarget is not Grid shape)
-                return;
-
-
-            SelectShape(shape);
-
-            BeginTextEditing(shape);
-        }
-
-
-        // ============================================================
-        // Text über Doppelklick bearbeiten
-        // ============================================================
-
-        private void ShapeText_MouseDoubleClick(
-            object sender,
-            MouseButtonEventArgs e)
-        {
-            if (sender is not TextBox textBox)
-                return;
-
-            if (textBox.Parent is not Grid shape)
-                return;
-
-
-            SelectShape(shape);
-
-            BeginTextEditing(shape);
-
-            e.Handled = true;
-        }
-
-
-        // ============================================================
-        // Textbearbeitung starten
-        // ============================================================
-
-        private void BeginTextEditing(
-            Grid shape)
+        /// <summary>
+        /// Textbearbeitung starten
+        /// </summary>
+        /// <param name="shape"></param>
+        private void BeginTextEditing(Grid shape)
         {
             if (shape.Tag is not ShapeElement model)
                 return;
@@ -330,16 +322,14 @@
                 "Text bearbeiten";
         }
 
-
-        // ============================================================
-        // TextBox finden
-        // ============================================================
-
-        private TextBox? FindTextBox(
-            Grid shape)
+        /// <summary>
+        /// TextBox finden
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <returns></returns>
+        private TextBox? FindTextBox(Grid shape)
         {
-            foreach (UIElement child
-                     in shape.Children)
+            foreach (UIElement child in shape.Children)
             {
                 if (child is TextBox textBox)
                     return textBox;
@@ -349,13 +339,12 @@
         }
 
 
-        // ============================================================
-        // Tastatur in TextBox
-        // ============================================================
-
-        private void ShapeTextBox_KeyDown(
-            object sender,
-            KeyEventArgs e)
+        /// <summary>
+        /// Tastatur in TextBox
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ShapeTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (sender is not TextBox textBox)
                 return;
@@ -387,14 +376,13 @@
             }
         }
 
+        /// <summary>
+        /// Textbearbeitung beendet
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 
-        // ============================================================
-        // Textbearbeitung beendet
-        // ============================================================
-
-        private void ShapeTextBox_LostFocus(
-            object sender,
-            RoutedEventArgs e)
+        private void ShapeTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             if (sender is not TextBox textBox)
                 return;
@@ -408,12 +396,12 @@
         }
 
 
-        // ============================================================
-        // Text übernehmen
-        // ============================================================
+        /// <summary>
+        /// Text übernehmen
+        /// </summary>
+        /// <param name="textBox"></param>
 
-        private void FinishTextEditing(
-            TextBox textBox)
+        private void FinishTextEditing(TextBox textBox)
         {
             if (textBox.Parent is not Grid shape)
                 return;
@@ -433,17 +421,16 @@
             _editingTextBox = null;
 
 
-            StatusText.Text =
-                "Text übernommen";
+            StatusText.Text = "Text übernommen";
         }
 
 
-        // ============================================================
-        // Textbearbeitung abbrechen
-        // ============================================================
+        /// <summary>
+        /// Textbearbeitung abbrechen
+        /// </summary>
+        /// <param name="textBox"></param>
 
-        private void CancelTextEditing(
-            TextBox textBox)
+        private void CancelTextEditing(TextBox textBox)
         {
             if (textBox.Parent is not Grid shape)
                 return;
@@ -466,20 +453,18 @@
             _editingTextBox = null;
 
 
-            StatusText.Text =
-                "Textbearbeitung abgebrochen";
+            StatusText.Text = "Textbearbeitung abgebrochen";
         }
 
 
-        // ============================================================
-        // Resize Thumb hinzufügen
-        // ============================================================
-
-        private void AddResizeThumb(
-            Grid grid,
-            HorizontalAlignment horizontalAlignment,
-            VerticalAlignment verticalAlignment,
-            ResizeDirection direction)
+        /// <summary>
+        /// Resize Thumb hinzufügen
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="horizontalAlignment"></param>
+        /// <param name="verticalAlignment"></param>
+        /// <param name="direction"></param>
+        private void AddResizeThumb(Grid grid, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment, ResizeDirection direction)
         {
             var thumb = new Thumb
             {
@@ -509,14 +494,9 @@
             };
 
 
-            thumb.DragStarted +=
-                ResizeThumb_DragStarted;
-
-            thumb.DragDelta +=
-                ResizeThumb_DragDelta;
-
-            thumb.DragCompleted +=
-                ResizeThumb_DragCompleted;
+            thumb.DragStarted += ResizeThumb_DragStarted;
+            thumb.DragDelta += ResizeThumb_DragDelta;
+            thumb.DragCompleted += ResizeThumb_DragCompleted;
 
 
             grid.Children.Add(thumb);
@@ -527,48 +507,36 @@
         // Resize Cursor
         // ============================================================
 
-        private Cursor GetResizeCursor(
-            ResizeDirection direction)
+        private Cursor GetResizeCursor(ResizeDirection direction)
         {
             return direction switch
             {
-                ResizeDirection.TopLeft =>
-                    Cursors.SizeNWSE,
+                ResizeDirection.TopLeft => Cursors.SizeNWSE,
 
-                ResizeDirection.Top =>
-                    Cursors.SizeNS,
+                ResizeDirection.Top => Cursors.SizeNS,
 
-                ResizeDirection.TopRight =>
-                    Cursors.SizeNESW,
+                ResizeDirection.TopRight => Cursors.SizeNESW,
 
-                ResizeDirection.Left =>
-                    Cursors.SizeWE,
+                ResizeDirection.Left => Cursors.SizeWE,
 
-                ResizeDirection.Right =>
-                    Cursors.SizeWE,
+                ResizeDirection.Right => Cursors.SizeWE,
 
-                ResizeDirection.BottomLeft =>
-                    Cursors.SizeNESW,
+                ResizeDirection.BottomLeft => Cursors.SizeNESW,
 
-                ResizeDirection.Bottom =>
-                    Cursors.SizeNS,
+                ResizeDirection.Bottom => Cursors.SizeNS,
 
-                ResizeDirection.BottomRight =>
-                    Cursors.SizeNWSE,
+                ResizeDirection.BottomRight => Cursors.SizeNWSE,
 
-                _ =>
-                    Cursors.Arrow
+                _ => Cursors.Arrow
             };
         }
 
-
-        // ============================================================
-        // Shape auswählen
-        // ============================================================
-
-        private void Shape_PreviewMouseLeftButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
+        /// <summary>
+        /// Shape auswählen
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Shape_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not Grid shape)
                 return;
@@ -580,9 +548,7 @@
 
             if (_isCreatingArrow)
             {
-                CreateArrow(
-                    _arrowSourceShape,
-                    shape);
+                CreateArrow(_arrowSourceShape, shape);
 
                 e.Handled = true;
 
@@ -617,29 +583,64 @@
                 return;
 
 
-            SelectShape(shape);
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                // ========================================================
+                // Strg + Klick
+                // ========================================================
 
+                if (IsShapeSelected(shape))
+                {
+                    RemoveShapeFromSelection(shape);
+
+                    _selectedShape = _selectedShapes.LastOrDefault();
+                }
+                else
+                {
+                    AddShapeToSelection(shape);
+
+                    _selectedShape = shape;
+                }
+            }
+            else
+            {
+                // ========================================================
+                // Normaler Klick
+                // ========================================================
+
+                // Wenn bereits mehrere Shapes ausgewählt sind und
+                // auf eines dieser Shapes geklickt wird, soll die
+                // bestehende Mehrfachauswahl erhalten bleiben.
+                if (_selectedShapes.Count > 1 && IsShapeSelected(shape))
+                {
+                    _selectedShape = shape;
+                }
+                else
+                {
+                    // Normaler Einzelklick auf ein nicht ausgewähltes Shape
+                    SelectSingleShape(shape);
+                }
+            }
 
             _isDragging = true;
 
-            _dragStartMousePosition =
-                e.GetPosition(WhiteBoardCanvas);
+            _dragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
 
-            _dragStartShapeX =
-                Canvas.GetLeft(shape);
+            _dragStartShapeX = Canvas.GetLeft(shape);
 
-            _dragStartShapeY =
-                Canvas.GetTop(shape);
+            _dragStartShapeY = Canvas.GetTop(shape);
 
+            if (_selectedShapes.Count > 1)
+            {
+                StartMultiDrag();
+            }
 
             shape.CaptureMouse();
 
             e.Handled = true;
         }
 
-        private void CreateArrow(
-    Grid? sourceShape,
-    Grid targetShape)
+        private void CreateArrow(Grid? sourceShape, Grid targetShape)
         {
             if (sourceShape == null)
             {
@@ -693,12 +694,10 @@
             SelectShape(targetShape);
 
 
-            StatusText.Text =
-                "Pfeil erstellt";
+            StatusText.Text = "Pfeil erstellt";
         }
 
-        private void DrawArrow(
-            ArrowElement arrow)
+        private void DrawArrow(ArrowElement arrow)
         {
             Grid? sourceShape =
                 FindShape(arrow.SourceId);
@@ -1253,48 +1252,80 @@
         // Shape bewegen
         // ============================================================
 
-        private void Shape_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void Shape_PreviewMouseMove(
+            object sender,
+            MouseEventArgs e)
         {
-            if (!_isDragging)
-                return;
-
             if (sender is not Grid shape)
                 return;
 
 
-            Point currentMousePosition = e.GetPosition(WhiteBoardCanvas);
+            if (!_isDragging)
+                return;
 
 
-            double deltaX = currentMousePosition.X -
+            Point currentPosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
+
+
+            double deltaX =
+                currentPosition.X -
                 _dragStartMousePosition.X;
 
-            double deltaY = currentMousePosition.Y -
+
+            double deltaY =
+                currentPosition.Y -
                 _dragStartMousePosition.Y;
 
 
-            double newX = _dragStartShapeX + deltaX;
+            // ========================================================
+            // Mehrfachauswahl
+            // ========================================================
 
-            double newY = _dragStartShapeY + deltaY;
+            if (_selectedShapes.Count > 1)
+            {
+                MoveSelectedShapes(deltaX, deltaY);
+
+                e.Handled = true;
+
+                return;
+            }
 
 
-            /*
-             * Shape bewegen.
-             */
-            Canvas.SetLeft(shape, newX);
+            // ========================================================
+            // Einzelnes Shape
+            // ========================================================
 
-            Canvas.SetTop(shape, newY);
+            double newX =
+                _dragStartShapeX +
+                deltaX;
 
 
-            /*
-             * Datenmodell aktualisieren.
-             */
+            double newY =
+                _dragStartShapeY +
+                deltaY;
+
+
+            Canvas.SetLeft(
+                shape,
+                newX);
+
+
+            Canvas.SetTop(
+                shape,
+                newY);
+
+
             if (shape.Tag is ShapeElement model)
             {
                 model.X = newX;
                 model.Y = newY;
             }
 
+
             UpdateArrows();
+
 
             StatusText.Text = $"Shape: X={newX:0}, Y={newY:0}";
 
@@ -1325,6 +1356,8 @@
                 shape.ReleaseMouseCapture();
             }
 
+
+            _multiDragStartPositions.Clear();
 
             if (shape.Tag is ShapeElement model)
             {
@@ -2166,6 +2199,135 @@
                 PropertyNamingPolicy =
                     JsonNamingPolicy.CamelCase
             };
+        }
+
+
+        // ============================================================
+        // Mehrfachmarkierung
+        // ============================================================
+        private bool IsShapeSelected(Grid shape)
+        {
+            return _selectedShapes.Contains(shape);
+        }
+
+        private void AddShapeToSelection(Grid shape)
+        {
+            if (_selectedShapes.Contains(shape))
+                return;
+
+
+            _selectedShapes.Add(shape);
+
+
+            SetShapeSelectedVisual(
+                shape,
+                true);
+
+
+            SetResizeHandlesVisibility(
+                shape,
+                Visibility.Visible);
+        }
+
+        private void RemoveShapeFromSelection(Grid shape)
+        {
+            if (!_selectedShapes.Remove(shape))
+                return;
+
+
+            SetShapeSelectedVisual(
+                shape,
+                false);
+
+
+            SetResizeHandlesVisibility(
+                shape,
+                Visibility.Collapsed);
+        }
+
+        private void ClearShapeSelection()
+        {
+            foreach (Grid shape in _selectedShapes.ToList())
+            {
+                SetShapeSelectedVisual(
+                    shape,
+                    false);
+
+                SetResizeHandlesVisibility(shape, Visibility.Collapsed);
+            }
+
+
+            _selectedShapes.Clear();
+
+            _selectedShape = null;
+        }
+
+        private void SelectSingleShape(Grid shape)
+        {
+            ClearShapeSelection();
+
+
+            AddShapeToSelection(shape);
+
+
+            _selectedShape = shape;
+        }
+
+        private void StartMultiDrag()
+        {
+            _multiDragStartPositions.Clear();
+
+
+            foreach (Grid shape in _selectedShapes)
+            {
+                _multiDragStartPositions[shape] = new Point(Canvas.GetLeft(shape), Canvas.GetTop(shape));
+            }
+        }
+
+        private void MoveSelectedShapes(double deltaX, double deltaY)
+        {
+            foreach (Grid shape in _selectedShapes.ToList())
+            {
+                if (!_multiDragStartPositions.TryGetValue(
+                        shape,
+                        out Point start))
+                {
+                    continue;
+                }
+
+
+                double newX =
+                    start.X +
+                    deltaX;
+
+
+                double newY =
+                    start.Y +
+                    deltaY;
+
+
+                Canvas.SetLeft(
+                    shape,
+                    newX);
+
+
+                Canvas.SetTop(
+                    shape,
+                    newY);
+
+
+                if (shape.Tag is ShapeElement model)
+                {
+                    model.X = newX;
+                    model.Y = newY;
+                }
+            }
+
+
+            UpdateArrows();
+
+
+            StatusText.Text = $"{_selectedShapes.Count} Shapes verschoben";
         }
 
         // ============================================================
