@@ -25,6 +25,15 @@
         private double _dragStartShapeX;
         private double _dragStartShapeY;
 
+        // ============================================================
+        // Text-Elemente
+        // ============================================================
+        private readonly List<TextElement> _textElements = new();
+        private Grid? _selectedTextElement;
+        private bool _isDraggingText;
+        private Point _textDragStartMousePosition;
+        private double _textDragStartX;
+        private double _textDragStartY;
 
         // ============================================================
         // Resize
@@ -471,26 +480,19 @@
                 Width = 10,
                 Height = 10,
 
-                HorizontalAlignment =
-                    horizontalAlignment,
+                HorizontalAlignment = horizontalAlignment,
 
-                VerticalAlignment =
-                    verticalAlignment,
+                VerticalAlignment = verticalAlignment,
 
                 Background = Brushes.White,
-
                 BorderBrush = Brushes.DodgerBlue,
+                BorderThickness = new Thickness(1),
 
-                BorderThickness =
-                    new Thickness(1),
-
-                Cursor =
-                    GetResizeCursor(direction),
+                Cursor = GetResizeCursor(direction),
 
                 Tag = direction,
 
-                Visibility =
-                    Visibility.Collapsed
+                Visibility = Visibility.Collapsed
             };
 
 
@@ -822,6 +824,7 @@
                 ShapeType.Diamond => GetDiamondConnectionPoint(sourceModel, sourceCenter, direction),
 
                 ShapeType.Triangle => GetTriangleConnectionPoint(sourceModel, sourceCenter, direction),
+                ShapeType.Hexagon => GetHexagonConnectionPoint(sourceModel, sourceCenter, direction),
 
                 _ => sourceCenter
             };
@@ -936,10 +939,7 @@
         }
         */
 
-        private Point GetTriangleConnectionPoint(
-    ShapeElement shape,
-    Point center,
-    Vector direction)
+        private Point GetTriangleConnectionPoint(ShapeElement shape, Point center, Vector direction)
         {
             if (direction.Length < 0.001)
                 return center;
@@ -1022,18 +1022,19 @@
             // Untere Seite
             // --------------------------------------------------------
 
-            intersection =
-                GetLineIntersection(
-                    center,
-                    rayEnd,
-                    bottomLeft,
-                    bottomRight);
+            intersection = GetLineIntersection(center, rayEnd, bottomLeft, bottomRight);
 
             if (intersection.HasValue)
                 return intersection.Value;
 
 
             return center;
+        }
+
+        private Point GetHexagonConnectionPoint(ShapeElement shape, Point center, Vector direction)
+        {
+            // zunächst Bounding-Box-Verbindung
+            return GetRectangleConnectionPoint(shape, center, direction);
         }
 
         private Point? GetLineIntersection(Point line1Start, Point line1End, Point line2Start, Point line2End)
@@ -1806,18 +1807,7 @@
 
         private string GetShapeName(ShapeType shapeType)
         {
-            return shapeType switch
-            {
-                ShapeType.Rectangle => "Rechteck",
-
-                ShapeType.RoundedRectangle => "Abgerundetes Rechteck",
-
-                ShapeType.Ellipse => "Ellipse",
-
-                ShapeType.Diamond => "Raute",
-
-                _ => "Shape"
-            };
+            return ShapeDefinitionProvider.GetDefinition(shapeType) ?.Name ?? "Shape";
         }
 
         private FrameworkElement CreateShapeVisual(ShapeElement shape)
@@ -1908,6 +1898,10 @@
                         return CreateTriangleVisual(shape);
                     }
 
+                case ShapeType.Hexagon:
+                    {
+                        return CreateHexagonVisual(shape);
+                    }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -2190,10 +2184,7 @@
 
         private void AddText_Click(object sender, RoutedEventArgs e)
         {
-            ShowNotImplemented(
-                "Text",
-                "Eigenständige Texte werden in einem späteren Schritt " +
-                "implementiert.");
+            AddTextElement();
         }
 
 
@@ -2628,6 +2619,41 @@
         }
 
         // ============================================================
+        // Shape Definition Hexagon
+        // ============================================================
+        private FrameworkElement CreateHexagonVisual(ShapeElement shape)
+        {
+            return new System.Windows.Shapes.Polygon
+            {
+                Fill =
+                    Brushes.White,
+
+                Stroke =
+                    Brushes.DimGray,
+
+                StrokeThickness =
+                    2,
+
+                Points =
+                    new PointCollection
+                    {
+                new Point(0.25, 0),
+                new Point(0.75, 0),
+                new Point(1, 0.5),
+                new Point(0.75, 1),
+                new Point(0.25, 1),
+                new Point(0, 0.5)
+                    },
+
+                Stretch =
+                    Stretch.Fill,
+
+                IsHitTestVisible =
+                    true
+            };
+        }
+
+        // ============================================================
         // Resize-Funktion
         // ============================================================
 
@@ -2645,6 +2671,278 @@
             return false;
         }
 
+        // ============================================================
+        // Text-Elemente
+        // ============================================================
+        private void AddTextElement()
+        {
+            var text = new TextElement
+            {
+                X = _contextMenuPosition.X,
+                Y = _contextMenuPosition.Y,
+
+                Width = 200,
+                Height = 60,
+
+                Text = "Text",
+
+                FontSize = 16
+            };
+
+
+            _textElements.Add(text);
+
+
+            var control = CreateTextControl(text);
+
+
+            WhiteBoardCanvas.Children.Add(control);
+
+
+            WhiteBoardContextMenu.IsOpen = false;
+
+
+            StatusText.Text = "Text erstellt";
+        }
+
+        private Grid CreateTextControl(TextElement text)
+        {
+            var grid = new Grid
+            {
+                Width = text.Width,
+                Height = text.Height,
+
+                Tag = text
+            };
+
+
+            var textBox = new TextBox
+            {
+                Text = text.Text,
+
+                FontSize = text.FontSize,
+
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+
+                VerticalAlignment = VerticalAlignment.Stretch,
+
+                HorizontalContentAlignment =  HorizontalAlignment.Left,
+
+                VerticalContentAlignment = VerticalAlignment.Center,
+
+                TextAlignment = TextAlignment.Left,
+
+                TextWrapping = TextWrapping.Wrap,
+
+                Background = Brushes.Transparent,
+
+                BorderThickness = new Thickness(0),
+
+                Padding = new Thickness(4),
+
+                IsReadOnly = true,
+
+                IsHitTestVisible = true,
+
+                Cursor = Cursors.Arrow,
+
+                Tag = text
+            };
+
+            textBox.KeyDown += TextElement_KeyDown;
+            textBox.LostFocus += TextElement_LostFocus;
+
+            grid.Children.Add(textBox);
+
+            // --------------------------------------------------------
+            // Verschieben
+            // --------------------------------------------------------
+
+            grid.PreviewMouseLeftButtonDown += TextElement_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += TextElement_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += TextElement_PreviewMouseLeftButtonUp;
+
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
+
+            Canvas.SetLeft(grid, text.X);
+            Canvas.SetTop(grid, text.Y);
+
+            return grid;
+        }
+
+        private void TextElement_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is not TextBox textBox)
+                return;
+
+
+            textBox.IsReadOnly = true;
+
+            textBox.Cursor = Cursors.Arrow;
+
+
+            if (textBox.Tag is TextElement text)
+            {
+                text.Text = textBox.Text;
+            }
+        }
+
+        private void TextElement_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not TextBox textBox)
+                return;
+
+
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                textBox.IsReadOnly = true;
+
+                textBox.Cursor = Cursors.Arrow;
+
+                textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+
+                e.Handled = true;
+            }
+
+
+            if (e.Key == Key.Escape)
+            {
+                if (textBox.Tag is TextElement text)
+                {
+                    textBox.Text = text.Text;
+                }
+
+
+                textBox.IsReadOnly = true;
+
+                textBox.Cursor =  Cursors.Arrow;
+
+                e.Handled = true;
+            }
+        }
+
+        private void TextElement_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid grid)
+                return;
+
+
+            if (grid.Tag is not TextElement text)
+                return;
+
+
+            // ========================================================
+            // Doppelklick -> Text bearbeiten
+            // ========================================================
+
+            if (e.ClickCount >= 2)
+            {
+                if (grid.Children.OfType<TextBox>().FirstOrDefault() is TextBox textBox)
+                {
+                    textBox.IsReadOnly = false;
+
+                    textBox.Cursor = Cursors.IBeam;
+
+                    textBox.Focus();
+
+                    textBox.SelectAll();
+                }
+
+
+                e.Handled = true;
+
+                return;
+            }
+
+
+            // ========================================================
+            // Einfacher Klick -> Text verschieben
+            // ========================================================
+
+            _selectedTextElement = grid;
+
+            _isDraggingText = true;
+
+            _textDragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
+
+            _textDragStartX = text.X;
+            _textDragStartY = text.Y;
+
+            grid.CaptureMouse();
+
+            e.Handled = true;
+        }
+
+        private void TextElement_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDraggingText)
+                return;
+
+
+            if (sender is not Grid grid)
+                return;
+
+
+            if (grid.Tag is not TextElement text)
+                return;
+
+
+            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
+
+            double deltaX = currentPosition.X - _textDragStartMousePosition.X;
+            double deltaY = currentPosition.Y - _textDragStartMousePosition.Y;
+
+            double newX = _textDragStartX + deltaX;
+            double newY = _textDragStartY + deltaY;
+
+
+            Canvas.SetLeft(grid, newX);
+            Canvas.SetTop(grid, newY);
+
+            text.X = newX;
+            text.Y = newY;
+
+
+            e.Handled = true;
+        }
+
+
+        private void TextElement_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingText)
+                return;
+
+
+            if (sender is not Grid grid)
+                return;
+
+
+            _isDraggingText = false;
+
+
+            if (grid.IsMouseCaptured)
+            {
+                grid.ReleaseMouseCapture();
+            }
+
+
+            e.Handled = true;
+        }
+
+        private void SelectTextElement(Grid textControl)
+        {
+            _selectedTextElement = textControl;
+
+
+            textControl.Focus();
+        }
 
         // ============================================================
         // Resize-Richtungen

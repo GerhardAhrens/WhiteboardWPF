@@ -10,7 +10,9 @@
                 new ShapeDefinition(ShapeType.RoundedRectangle, "Abgerundetes Rechteck"),
                 new ShapeDefinition(ShapeType.Ellipse, "Ellipse"),
                 new ShapeDefinition(ShapeType.Diamond, "Raute"),
-                new ShapeDefinition(ShapeType.Triangle,"Dreieck")
+                new ShapeDefinition(ShapeType.Triangle,"Dreieck"),
+                new ShapeDefinition(ShapeType.Hexagon, "Sechseck")
+
             };
 
 
