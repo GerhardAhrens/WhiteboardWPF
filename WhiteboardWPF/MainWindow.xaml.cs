@@ -2684,7 +2684,7 @@
                 Width = 200,
                 Height = 60,
 
-                Text = "Text",
+                Text = $"Text-{DateTime.Now:HH:mm:ss}",
 
                 FontSize = 16
             };
