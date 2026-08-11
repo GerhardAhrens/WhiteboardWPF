@@ -1510,47 +1510,71 @@
         // Resize gestartet
         // ============================================================
 
-        private void ResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
+        private void ResizeThumb_DragStarted(
+            object sender,
+            DragStartedEventArgs e)
         {
             if (sender is not Thumb thumb)
                 return;
 
-
-            if (thumb.Parent is not Grid shape)
+            if (thumb.Parent is not Grid control)
                 return;
-
 
             if (thumb.Tag is not ResizeDirection direction)
                 return;
 
 
-            if (shape.Tag is not ShapeElement model)
-                return;
-
-
-            SelectShape(shape);
-
             _isDragging = false;
+            _isDraggingText = false;
 
+            // ========================================================
+            // Resize starten
+            // ========================================================
             _isResizing = true;
-
             _resizeDirection = direction;
 
 
-            // --------------------------------------------------------
-            // Ausgangswerte des Shapes merken
-            // --------------------------------------------------------
+            // ========================================================
+            // Shape
+            // ========================================================
 
-            _resizeStartX = model.X;
+            if (control.Tag is ShapeElement shape)
+            {
+                SelectShape(control);
 
-            _resizeStartY = model.Y;
+                _resizeStartX = shape.X;
+                _resizeStartY = shape.Y;
 
-            _resizeStartWidth = model.Width;
+                _resizeStartWidth = shape.Width;
+                _resizeStartHeight = shape.Height;
 
-            _resizeStartHeight = model.Height;
+                StatusText.Text = "Shape-Größe ändern";
+
+                return;
+            }
 
 
-            StatusText.Text = "Größe ändern";
+            // ========================================================
+            // Text
+            // ========================================================
+
+            if (control.Tag is TextElement text)
+            {
+                _selectedTextElement = control;
+
+                _resizeStartX = text.X;
+                _resizeStartY = text.Y;
+
+                _resizeStartWidth = text.Width;
+                _resizeStartHeight = text.Height;
+
+                StatusText.Text = "Text-Größe ändern";
+
+                return;
+            }
+
+
+            _isResizing = false;
         }
 
 
@@ -1564,22 +1588,12 @@
             if (!_isResizing)
                 return;
 
-
             if (sender is not Thumb thumb)
                 return;
 
-
-            if (thumb.Parent is not Grid shape)
+            if (thumb.Parent is not Grid control)
                 return;
 
-
-            if (shape.Tag is not ShapeElement model)
-                return;
-
-
-            // ========================================================
-            // Drag-Delta des Thumb verwenden
-            // ========================================================
 
             double deltaX =
                 e.HorizontalChange;
@@ -1602,7 +1616,7 @@
 
 
             // ========================================================
-            // Linke Seite
+            // Links
             // ========================================================
 
             if (_resizeDirection.HasFlag(
@@ -1632,7 +1646,7 @@
 
 
             // ========================================================
-            // Rechte Seite
+            // Rechts
             // ========================================================
 
             if (_resizeDirection.HasFlag(
@@ -1646,7 +1660,7 @@
 
 
             // ========================================================
-            // Obere Seite
+            // Oben
             // ========================================================
 
             if (_resizeDirection.HasFlag(
@@ -1676,7 +1690,7 @@
 
 
             // ========================================================
-            // Untere Seite
+            // Unten
             // ========================================================
 
             if (_resizeDirection.HasFlag(
@@ -1690,50 +1704,48 @@
 
 
             // ========================================================
-            // WPF-Control aktualisieren
+            // Control
             // ========================================================
 
-            shape.Width =
-                newWidth;
+            control.Width = newWidth;
+            control.Height = newHeight;
 
-            shape.Height =
-                newHeight;
-
-
-            Canvas.SetLeft(
-                shape,
-                newX);
-
-            Canvas.SetTop(
-                shape,
-                newY);
+            Canvas.SetLeft(control, newX);
+            Canvas.SetTop(control, newY);
 
 
             // ========================================================
-            // Datenmodell aktualisieren
+            // Shape
             // ========================================================
 
-            model.X =
-                newX;
+            if (control.Tag is ShapeElement shape)
+            {
+                shape.X = newX;
+                shape.Y = newY;
 
-            model.Y =
-                newY;
+                shape.Width = newWidth;
+                shape.Height = newHeight;
 
-            model.Width =
-                newWidth;
-
-            model.Height =
-                newHeight;
+                UpdateArrows();
+            }
 
 
             // ========================================================
-            // Pfeile aktualisieren
+            // Text
             // ========================================================
 
-            UpdateArrows();
+            else if (control.Tag is TextElement text)
+            {
+                text.X = newX;
+                text.Y = newY;
+
+                text.Width = newWidth;
+                text.Height = newHeight;
+            }
 
 
-            StatusText.Text = $"Größe: {newWidth:0} x {newHeight:0}";
+            StatusText.Text =
+                $"Größe: {newWidth:0} x {newHeight:0}";
         }
 
         // ============================================================
@@ -1746,10 +1758,16 @@
 
 
             if (sender is Thumb thumb &&
-                thumb.Parent is Grid shape &&
-                shape.Tag is ShapeElement model)
+                thumb.Parent is Grid control)
             {
-                StatusText.Text = $"Shape-Größe: {model.Width:0} x {model.Height:0}";
+                if (control.Tag is ShapeElement shape)
+                {
+                    StatusText.Text = $"Shape-Größe: {shape.Width:0} x {shape.Height:0}";
+                }
+                else if (control.Tag is TextElement text)
+                {
+                    StatusText.Text = $"Text-Größe: {text.Width:0} x {text.Height:0}";
+                }
             }
         }
 
@@ -1937,38 +1955,70 @@
 
         private void SelectShape(Grid? shape)
         {
+            // ========================================================
             // Pfeilauswahl aufheben
+            // ========================================================
+
             if (_selectedArrow != null)
             {
                 SelectArrow(null);
             }
 
-            // Alte Auswahl entfernen
 
-            if (_selectedShape != null)
+            // ========================================================
+            // Textauswahl aufheben
+            // ========================================================
+
+            if (_selectedTextElement != null)
             {
-                SetShapeSelectedVisual(_selectedShape, false);
+                SetResizeHandlesVisibility(
+                    _selectedTextElement,
+                    Visibility.Collapsed);
 
-                SetResizeHandlesVisibility(_selectedShape, Visibility.Collapsed);
+                _selectedTextElement = null;
             }
 
 
-            // --------------------------------------------------------
-            // Neue Auswahl
-            // --------------------------------------------------------
+            // ========================================================
+            // Alte Shape-Auswahl entfernen
+            // ========================================================
 
-            _selectedShape = shape;
+            if (_selectedShape != null)
+            {
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    false);
+
+                SetResizeHandlesVisibility(
+                    _selectedShape,
+                    Visibility.Collapsed);
+            }
+
+
+            // ========================================================
+            // Neue Auswahl
+            // ========================================================
+
+            _selectedShape =
+                shape;
 
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(_selectedShape, true);
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    true);
 
-                SetResizeHandlesVisibility(_selectedShape, Visibility.Visible);
+                SetResizeHandlesVisibility(
+                    _selectedShape,
+                    Visibility.Visible);
 
-                Panel.SetZIndex(_selectedShape, GetHighestZIndex() + 1);
+                Panel.SetZIndex(
+                    _selectedShape,
+                    GetHighestZIndex() + 1);
             }
         }
+
 
         // ============================================================
         // Resize-Griffe anzeigen/verstecken
@@ -2828,7 +2878,9 @@
             }
         }
 
-        private void TextElement_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void TextElement_PreviewMouseLeftButtonDown(
+            object sender,
+            MouseButtonEventArgs e)
         {
             if (sender is not Grid grid)
                 return;
@@ -2839,22 +2891,37 @@
 
 
             // ========================================================
+            // Resize-Griff
+            // ========================================================
+
+            if (IsResizeThumbSource(
+                    e.OriginalSource as DependencyObject))
+            {
+                return;
+            }
+
+
+            // ========================================================
             // Doppelklick -> Text bearbeiten
             // ========================================================
 
             if (e.ClickCount >= 2)
             {
-                if (grid.Children.OfType<TextBox>().FirstOrDefault() is TextBox textBox)
+                SelectTextElement(grid);
+
+                if (grid.Children
+                    .OfType<TextBox>()
+                    .FirstOrDefault() is TextBox textBox)
                 {
                     textBox.IsReadOnly = false;
 
-                    textBox.Cursor = Cursors.IBeam;
+                    textBox.Cursor =
+                        Cursors.IBeam;
 
                     textBox.Focus();
 
                     textBox.SelectAll();
                 }
-
 
                 e.Handled = true;
 
@@ -2863,25 +2930,37 @@
 
 
             // ========================================================
-            // Einfacher Klick -> Text verschieben
+            // Einfacher Klick -> Text auswählen + verschieben
             // ========================================================
 
-            _selectedTextElement = grid;
+            SelectTextElement(grid);
 
             _isDraggingText = true;
 
-            _textDragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
+            _textDragStartMousePosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
 
-            _textDragStartX = text.X;
-            _textDragStartY = text.Y;
+            _textDragStartX =
+                text.X;
+
+            _textDragStartY =
+                text.Y;
 
             grid.CaptureMouse();
 
             e.Handled = true;
         }
 
-        private void TextElement_PreviewMouseMove(object sender, MouseEventArgs e)
+
+        private void TextElement_PreviewMouseMove(
+            object sender,
+            MouseEventArgs e)
         {
+            if (_isResizing)
+                return;
+
+
             if (!_isDraggingText)
                 return;
 
@@ -2894,17 +2973,40 @@
                 return;
 
 
-            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
-
-            double deltaX = currentPosition.X - _textDragStartMousePosition.X;
-            double deltaY = currentPosition.Y - _textDragStartMousePosition.Y;
-
-            double newX = _textDragStartX + deltaX;
-            double newY = _textDragStartY + deltaY;
+            Point currentPosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
 
 
-            Canvas.SetLeft(grid, newX);
-            Canvas.SetTop(grid, newY);
+            double deltaX =
+                currentPosition.X -
+                _textDragStartMousePosition.X;
+
+
+            double deltaY =
+                currentPosition.Y -
+                _textDragStartMousePosition.Y;
+
+
+            double newX =
+                _textDragStartX +
+                deltaX;
+
+
+            double newY =
+                _textDragStartY +
+                deltaY;
+
+
+            Canvas.SetLeft(
+                grid,
+                newX);
+
+
+            Canvas.SetTop(
+                grid,
+                newY);
+
 
             text.X = newX;
             text.Y = newY;
@@ -2936,12 +3038,57 @@
             e.Handled = true;
         }
 
-        private void SelectTextElement(Grid textControl)
+        private void SelectTextElement(Grid? textControl)
         {
-            _selectedTextElement = textControl;
+            // --------------------------------------------------------
+            // Alte Shape-Auswahl entfernen
+            // --------------------------------------------------------
+
+            if (_selectedShape != null)
+            {
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    false);
+
+                SetResizeHandlesVisibility(
+                    _selectedShape,
+                    Visibility.Collapsed);
+
+                _selectedShape = null;
+            }
 
 
-            textControl.Focus();
+            // --------------------------------------------------------
+            // Alte Text-Auswahl entfernen
+            // --------------------------------------------------------
+
+            if (_selectedTextElement != null &&
+                _selectedTextElement != textControl)
+            {
+                SetResizeHandlesVisibility(
+                    _selectedTextElement,
+                    Visibility.Collapsed);
+            }
+
+
+            // --------------------------------------------------------
+            // Neue Text-Auswahl
+            // --------------------------------------------------------
+
+            _selectedTextElement =
+                textControl;
+
+
+            if (_selectedTextElement != null)
+            {
+                SetResizeHandlesVisibility(
+                    _selectedTextElement,
+                    Visibility.Visible);
+
+                Panel.SetZIndex(
+                    _selectedTextElement,
+                    GetHighestZIndex() + 1);
+            }
         }
 
         // ============================================================
