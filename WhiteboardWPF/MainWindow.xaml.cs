@@ -2802,6 +2802,19 @@
             textBox.KeyDown += TextElement_KeyDown;
             textBox.LostFocus += TextElement_LostFocus;
 
+            var textContextMenu = new ContextMenu();
+
+            var deleteMenuItem = new MenuItem
+            {
+                Header = "Löschen"
+            };
+
+            deleteMenuItem.Click += TextElement_DeleteClick;
+
+            textContextMenu.Items.Add(deleteMenuItem);
+
+            grid.ContextMenu = textContextMenu;
+
             grid.Children.Add(textBox);
 
             // --------------------------------------------------------
@@ -2825,6 +2838,53 @@
             Canvas.SetTop(grid, text.Y);
 
             return grid;
+        }
+
+        private void TextElement_DeleteClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+            if (menuItem.Parent is not ContextMenu contextMenu)
+                return;
+
+            if (contextMenu.PlacementTarget is not Grid grid)
+                return;
+
+            DeleteTextElement(grid);
+        }
+
+        private void DeleteTextElement(Grid textControl)
+        {
+            if (textControl.Tag is not TextElement text)
+                return;
+
+
+            // --------------------------------------------------------
+            // Aus Datenmodell entfernen
+            // --------------------------------------------------------
+
+            _textElements.Remove(text);
+
+
+            // --------------------------------------------------------
+            // Auswahl entfernen
+            // --------------------------------------------------------
+
+            if (_selectedTextElement == textControl)
+            {
+                _selectedTextElement = null;
+            }
+
+
+            // --------------------------------------------------------
+            // Control vom Canvas entfernen
+            // --------------------------------------------------------
+
+            WhiteBoardCanvas.Children.Remove(textControl);
+
+
+            StatusText.Text = "Text gelöscht";
         }
 
         private void TextElement_LostFocus(object sender, RoutedEventArgs e)
