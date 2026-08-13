@@ -2288,18 +2288,10 @@
             var dialog =
                 new SaveFileDialog
                 {
-                    Title =
-                        "Whiteboard speichern",
-
-                    Filter =
-                        "Whiteboard (*.json)|*.json|" +
-                        "Alle Dateien (*.*)|*.*",
-
-                    DefaultExt =
-                        ".json",
-
-                    AddExtension =
-                        true
+                    Title = "Whiteboard speichern",
+                    Filter = "Whiteboard (*.json)|*.json|" + "Alle Dateien (*.*)|*.*",
+                    DefaultExt = ".json",
+                    AddExtension = true
                 };
 
 
@@ -2309,8 +2301,7 @@
 
             try
             {
-                SaveBoard(
-                    dialog.FileName);
+                SaveBoard(dialog.FileName);
             }
             catch (Exception ex)
             {
@@ -2325,46 +2316,26 @@
 
         private void SaveBoard(string fileName)
         {
+            UpdateTextElementsFromControls();
+
             var document =
                 new WhiteBoardDocument
                 {
                     Version = 1,
-
-                    Shapes =
-                        GetShapeModels(),
-
-                    Arrows =
-                        _arrows.ToList()
+                    Shapes = GetShapeModels(),
+                    TextElements = _textElements.ToList(),
+                    Arrows = _arrows.ToList()
                 };
 
-
-            var options =
-                CreateJsonOptions();
-
-
-            string json =
-                JsonSerializer.Serialize(
-                    document,
-                    options);
-
-
-            File.WriteAllText(
-                fileName,
-                json);
-
-
+            var options = CreateJsonOptions();
+            string json = JsonSerializer.Serialize(document, options);
+            File.WriteAllText(fileName, json);
             StatusText.Text = $"Board gespeichert: {fileName}";
         }
 
         private List<ShapeElement> GetShapeModels()
         {
-            return WhiteBoardCanvas.Children
-                .OfType<Grid>()
-                .Where(grid =>
-                    grid.Tag is ShapeElement)
-                .Select(grid =>
-                    (ShapeElement)grid.Tag)
-                .ToList();
+            return WhiteBoardCanvas.Children.OfType<Grid>().Where(grid => grid.Tag is ShapeElement).Select(grid => (ShapeElement)grid.Tag).ToList();
         }
 
         private void LoadBoard_Click(object sender, RoutedEventArgs e)
@@ -2372,26 +2343,17 @@
             var dialog =
                 new OpenFileDialog
                 {
-                    Title =
-                        "Whiteboard laden",
-
-                    Filter =
-                        "Whiteboard (*.json)|*.json|" +
-                        "Alle Dateien (*.*)|*.*",
-
-                    DefaultExt =
-                        ".json"
+                    Title = "Whiteboard laden",
+                    Filter = "Whiteboard (*.json)|*.json|" + "Alle Dateien (*.*)|*.*",
+                    DefaultExt = ".json"
                 };
-
 
             if (dialog.ShowDialog() != true)
                 return;
 
-
             try
             {
-                LoadBoard(
-                    dialog.FileName);
+                LoadBoard(dialog.FileName);
             }
             catch (Exception ex)
             {
@@ -2412,7 +2374,10 @@
             var options = CreateJsonOptions();
 
 
-            var document = JsonSerializer.Deserialize<WhiteBoardDocument>(json, options);
+            var document =
+                JsonSerializer.Deserialize<WhiteBoardDocument>(
+                    json,
+                    options);
 
 
             if (document == null)
@@ -2422,11 +2387,36 @@
             ClearBoard();
 
 
+            // ========================================================
+            // Shapes
+            // ========================================================
+
             foreach (ShapeElement shape in document.Shapes)
             {
                 AddLoadedShape(shape);
             }
 
+
+            // ========================================================
+            // Text-Elemente
+            // ========================================================
+
+            _textElements.Clear();
+
+
+            foreach (TextElement text in document.TextElements)
+            {
+                _textElements.Add(text);
+
+                var control = CreateTextControl(text);
+
+                WhiteBoardCanvas.Children.Add(control);
+            }
+
+
+            // ========================================================
+            // Pfeile
+            // ========================================================
 
             foreach (ArrowElement arrow in document.Arrows)
             {
@@ -2439,8 +2429,17 @@
                 DrawArrow(arrow);
             }
 
+
+            // ========================================================
+            // Auswahl zurücksetzen
+            // ========================================================
+
             SelectShape(null);
+
+            SelectTextElement(null);
+
             SelectArrow(null);
+
 
             StatusText.Text = $"Board geladen: {fileName}";
         }
@@ -2452,7 +2451,6 @@
 
             Canvas.SetLeft(control, shape.X);
             Canvas.SetTop(control, shape.Y);
-
 
             WhiteBoardCanvas.Children.Add(control);
         }
@@ -2466,8 +2464,7 @@
             {
                 WriteIndented = true,
 
-                PropertyNamingPolicy =
-                    JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
         }
 
@@ -2505,23 +2502,16 @@
                 return;
 
 
-            SetShapeSelectedVisual(
-                shape,
-                false);
+            SetShapeSelectedVisual(shape, false);
 
-
-            SetResizeHandlesVisibility(
-                shape,
-                Visibility.Collapsed);
+            SetResizeHandlesVisibility(shape, Visibility.Collapsed);
         }
 
         private void ClearShapeSelection()
         {
             foreach (Grid shape in _selectedShapes.ToList())
             {
-                SetShapeSelectedVisual(
-                    shape,
-                    false);
+                SetShapeSelectedVisual(shape, false);
 
                 SetResizeHandlesVisibility(shape, Visibility.Collapsed);
             }
@@ -2535,10 +2525,7 @@
         private void SelectSingleShape(Grid shape)
         {
             ClearShapeSelection();
-
-
             AddShapeToSelection(shape);
-
 
             _selectedShape = shape;
         }
@@ -2565,25 +2552,11 @@
                     continue;
                 }
 
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
 
-                double newX =
-                    start.X +
-                    deltaX;
-
-
-                double newY =
-                    start.Y +
-                    deltaY;
-
-
-                Canvas.SetLeft(
-                    shape,
-                    newX);
-
-
-                Canvas.SetTop(
-                    shape,
-                    newY);
+                Canvas.SetLeft(shape, newX);
+                Canvas.SetTop(shape, newY);
 
 
                 if (shape.Tag is ShapeElement model)
@@ -2593,9 +2566,7 @@
                 }
             }
 
-
             UpdateArrows();
-
 
             StatusText.Text = $"{_selectedShapes.Count} Shapes verschoben";
         }
@@ -2614,16 +2585,12 @@
                 var item =
                     new MenuItem
                     {
-                        Header =
-                            definition.Name,
-
-                        Tag =
-                            definition.Type
+                        Header = definition.Name,
+                        Tag = definition.Type
                     };
 
 
                 item.Click += AddShapeFromMenu_Click;
-
 
                 this.ShapeMenu.Items.Add(item);
             }
@@ -2637,7 +2604,6 @@
 
             if (item.Tag is not ShapeType shapeType)
                 return;
-
 
             AddShape(shapeType);
         }
@@ -2675,31 +2641,21 @@
         {
             return new System.Windows.Shapes.Polygon
             {
-                Fill =
-                    Brushes.White,
-
-                Stroke =
-                    Brushes.DimGray,
-
-                StrokeThickness =
-                    2,
-
-                Points =
-                    new PointCollection
+                Fill = Brushes.White,
+                Stroke = Brushes.DimGray,
+                StrokeThickness = 2,
+                Points = new PointCollection
                     {
-                new Point(0.25, 0),
-                new Point(0.75, 0),
-                new Point(1, 0.5),
-                new Point(0.75, 1),
-                new Point(0.25, 1),
-                new Point(0, 0.5)
+                        new Point(0.25, 0),
+                        new Point(0.75, 0),
+                        new Point(1, 0.5),
+                        new Point(0.75, 1),
+                        new Point(0.25, 1),
+                        new Point(0, 0.5)
                     },
 
-                Stretch =
-                    Stretch.Fill,
-
-                IsHitTestVisible =
-                    true
+                Stretch = Stretch.Fill,
+                IsHitTestVisible = true
             };
         }
 
@@ -2742,15 +2698,11 @@
 
             _textElements.Add(text);
 
-
             var control = CreateTextControl(text);
-
 
             WhiteBoardCanvas.Children.Add(control);
 
-
             WhiteBoardContextMenu.IsOpen = false;
-
 
             StatusText.Text = "Text erstellt";
         }
@@ -2761,7 +2713,6 @@
             {
                 Width = text.Width,
                 Height = text.Height,
-
                 Tag = text
             };
 
@@ -2769,33 +2720,20 @@
             var textBox = new TextBox
             {
                 Text = text.Text,
-
                 FontSize = text.FontSize,
-
+                AcceptsReturn = true,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-
                 VerticalAlignment = VerticalAlignment.Stretch,
-
                 HorizontalContentAlignment =  HorizontalAlignment.Left,
-
                 VerticalContentAlignment = VerticalAlignment.Center,
-
                 TextAlignment = TextAlignment.Left,
-
                 TextWrapping = TextWrapping.Wrap,
-
                 Background = Brushes.Transparent,
-
                 BorderThickness = new Thickness(0),
-
                 Padding = new Thickness(4),
-
                 IsReadOnly = true,
-
                 IsHitTestVisible = true,
-
                 Cursor = Cursors.Arrow,
-
                 Tag = text
             };
 
@@ -3148,6 +3086,47 @@
                 Panel.SetZIndex(
                     _selectedTextElement,
                     GetHighestZIndex() + 1);
+            }
+        }
+
+        private void UpdateTextElementsFromControls()
+        {
+            foreach (UIElement child in WhiteBoardCanvas.Children)
+            {
+                if (child is not Grid grid)
+                    continue;
+
+
+                if (grid.Tag is not TextElement text)
+                    continue;
+
+
+                TextBox? textBox =
+                    grid.Children
+                        .OfType<TextBox>()
+                        .FirstOrDefault();
+
+
+                if (textBox == null)
+                    continue;
+
+
+                text.Text =
+                    textBox.Text;
+
+
+                text.X =
+                    Canvas.GetLeft(grid);
+
+                text.Y =
+                    Canvas.GetTop(grid);
+
+
+                text.Width =
+                    grid.Width;
+
+                text.Height =
+                    grid.Height;
             }
         }
 

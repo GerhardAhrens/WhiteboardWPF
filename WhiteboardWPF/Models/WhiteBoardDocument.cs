@@ -7,5 +7,7 @@
         public List<ShapeElement> Shapes { get; set; } = new();
 
         public List<ArrowElement> Arrows { get; set; } = new();
+
+        public List<TextElement> TextElements { get; set; } = new();
     }
 }
