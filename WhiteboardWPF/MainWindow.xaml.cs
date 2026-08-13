@@ -1313,8 +1313,7 @@
             _arrows.Remove(arrow);
 
 
-            WhiteBoardCanvas.Children.Remove(
-                path);
+            WhiteBoardCanvas.Children.Remove(path);
 
 
             if (_selectedArrow == path)
@@ -3101,33 +3100,182 @@
                     continue;
 
 
-                TextBox? textBox =
-                    grid.Children
-                        .OfType<TextBox>()
-                        .FirstOrDefault();
+                TextBox? textBox = grid.Children.OfType<TextBox>().FirstOrDefault();
 
 
                 if (textBox == null)
                     continue;
 
 
-                text.Text =
-                    textBox.Text;
+                text.Text = textBox.Text;
 
 
-                text.X =
-                    Canvas.GetLeft(grid);
+                text.X = Canvas.GetLeft(grid);
+                text.Y = Canvas.GetTop(grid);
 
-                text.Y =
-                    Canvas.GetTop(grid);
-
-
-                text.Width =
-                    grid.Width;
-
-                text.Height =
-                    grid.Height;
+                text.Width = grid.Width;
+                text.Height = grid.Height;
             }
+        }
+
+        // ============================================================
+        // Shapes, Pfeile, Text löschen
+        // ============================================================
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Delete)
+                return;
+
+
+            if (Keyboard.FocusedElement is TextBox textBox && !textBox.IsReadOnly)
+            {
+                return;
+            }
+
+
+            DeleteSelectedElement();
+
+
+            e.Handled = true;
+        }
+
+        private void DeleteSelectedElement()
+        {
+            // ========================================================
+            // Shape
+            // ========================================================
+
+            if (_selectedShape != null)
+            {
+                DeleteSelectedShape();
+
+                return;
+            }
+
+
+            // ========================================================
+            // Text
+            // ========================================================
+
+            if (_selectedTextElement != null)
+            {
+                DeleteTextElement(_selectedTextElement);
+
+                return;
+            }
+
+
+            // ========================================================
+            // Pfeil
+            // ========================================================
+
+            if (_selectedArrow != null)
+            {
+                DeleteSelectedArrow();
+
+                return;
+            }
+
+
+            StatusText.Text =
+                "Kein Element ausgewählt";
+        }
+
+        private void DeleteSelectedShape()
+        {
+            if (_selectedShape == null)
+                return;
+
+
+            if (_selectedShape.Tag is not ShapeElement shapeModel)
+                return;
+
+
+            Guid shapeId =
+                shapeModel.Id;
+
+
+            // ========================================================
+            // Verbundene Pfeile
+            // ========================================================
+
+            var connectedArrows =
+                _arrows
+                    .Where(arrow =>
+                        arrow.SourceId == shapeId ||
+                        arrow.TargetId == shapeId)
+                    .ToList();
+
+
+            // ========================================================
+            // Pfeildarstellungen entfernen
+            // ========================================================
+
+            foreach (var element in
+                     WhiteBoardCanvas.Children
+                         .OfType<System.Windows.Shapes.Path>()
+                         .ToList())
+            {
+                if (element.Tag is not ArrowElement arrow)
+                    continue;
+
+
+                if (arrow.SourceId == shapeId ||
+                    arrow.TargetId == shapeId)
+                {
+                    WhiteBoardCanvas.Children.Remove(
+                        element);
+                }
+            }
+
+
+            // ========================================================
+            // Pfeile aus Modell entfernen
+            // ========================================================
+
+            foreach (var arrow in connectedArrows)
+            {
+                _arrows.Remove(arrow);
+            }
+
+
+            _selectedArrow = null;
+
+
+            // ========================================================
+            // Shape entfernen
+            // ========================================================
+
+            WhiteBoardCanvas.Children.Remove(_selectedShape);
+
+
+            _selectedShape = null;
+
+
+            StatusText.Text = "Shape und verbundene Pfeile gelöscht";
+        }
+
+        private void DeleteSelectedArrow()
+        {
+            if (_selectedArrow == null)
+                return;
+
+
+            if (_selectedArrow.Tag is not ArrowElement arrow)
+                return;
+
+
+            _arrows.Remove(arrow);
+
+
+            WhiteBoardCanvas.Children.Remove(_selectedArrow);
+
+
+            _selectedArrow = null;
+
+
+            StatusText.Text = "Pfeil gelöscht";
         }
 
         // ============================================================

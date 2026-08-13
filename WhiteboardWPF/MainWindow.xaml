@@ -8,6 +8,7 @@
     Title="MainWindow"
     Width="800"
     Height="500"
+    PreviewKeyDown="Window_PreviewKeyDown"
     mc:Ignorable="d">
 
     <Window.InputBindings>
