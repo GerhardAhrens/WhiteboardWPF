@@ -71,6 +71,7 @@
         // ============================================================
         private readonly List<Grid> _selectedShapes = new();
         private readonly Dictionary<Grid, Point> _multiDragStartPositions = new();
+        private readonly List<Grid> _selectedTextElements = new();
 
         public MainWindow()
         {
@@ -1414,9 +1415,7 @@
 
             if (_selectedShapes.Count > 1)
             {
-                MoveSelectedShapes(
-                    deltaX,
-                    deltaY);
+                MoveSelectedShapes(deltaX, deltaY);
 
                 e.Handled = true;
 
@@ -1955,6 +1954,19 @@
         private void SelectShape(Grid? shape)
         {
             // ========================================================
+            // Textauswahl aufheben
+            // ========================================================
+
+            foreach (Grid text in _selectedTextElements.ToList())
+            {
+                SetResizeHandlesVisibility(text,  Visibility.Collapsed);
+            }
+
+            _selectedTextElements.Clear();
+
+            _selectedTextElement = null;
+
+            // ========================================================
             // Pfeilauswahl aufheben
             // ========================================================
 
@@ -1970,9 +1982,7 @@
 
             if (_selectedTextElement != null)
             {
-                SetResizeHandlesVisibility(
-                    _selectedTextElement,
-                    Visibility.Collapsed);
+                SetResizeHandlesVisibility(_selectedTextElement, Visibility.Collapsed);
 
                 _selectedTextElement = null;
             }
@@ -1984,13 +1994,9 @@
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    false);
+                SetShapeSelectedVisual(_selectedShape, false);
 
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Collapsed);
+                SetResizeHandlesVisibility(_selectedShape, Visibility.Collapsed);
             }
 
 
@@ -1998,23 +2004,16 @@
             // Neue Auswahl
             // ========================================================
 
-            _selectedShape =
-                shape;
+            _selectedShape = shape;
 
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    true);
+                SetShapeSelectedVisual(_selectedShape, true);
 
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Visible);
+                SetResizeHandlesVisibility(_selectedShape, Visibility.Visible);
 
-                Panel.SetZIndex(
-                    _selectedShape,
-                    GetHighestZIndex() + 1);
+                Panel.SetZIndex(_selectedShape, GetHighestZIndex() + 1);
             }
         }
 
@@ -2022,7 +2021,6 @@
         // ============================================================
         // Resize-Griffe anzeigen/verstecken
         // ============================================================
-
         private void SetResizeHandlesVisibility(Grid shape, Visibility visibility)
         {
             foreach (UIElement child in shape.Children)
@@ -2038,7 +2036,6 @@
         // ============================================================
         // Höchsten ZIndex ermitteln
         // ============================================================
-
         private int GetHighestZIndex()
         {
             int highest = 0;
@@ -2058,7 +2055,6 @@
         // ============================================================
         // Neues Board
         // ============================================================
-
         private void NewBoard_Click( object sender, RoutedEventArgs e)
         {
             if (WhiteBoardCanvas.Children.Count > 0)
@@ -2098,39 +2094,141 @@
 
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
+            // ========================================================
+            // Mehrfachauswahl
+            // ========================================================
+
+            if (_selectedShapes.Count > 0)
+            {
+                var shapesToDelete =
+                    _selectedShapes
+                        .Where(shape =>
+                            shape.Tag is ShapeElement)
+                        .ToList();
+
+
+                foreach (Grid shapeControl in shapesToDelete)
+                {
+                    if (shapeControl.Tag is not ShapeElement shapeModel)
+                        continue;
+
+
+                    Guid shapeId =
+                        shapeModel.Id;
+
+
+                    // ------------------------------------------------
+                    // Verbundene Pfeile ermitteln
+                    // ------------------------------------------------
+
+                    var connectedArrows =
+                        _arrows
+                            .Where(arrow =>
+                                arrow.SourceId == shapeId ||
+                                arrow.TargetId == shapeId)
+                            .ToList();
+
+
+                    // ------------------------------------------------
+                    // Pfeildarstellungen entfernen
+                    // ------------------------------------------------
+
+                    foreach (var element in
+                             WhiteBoardCanvas.Children
+                                 .OfType<System.Windows.Shapes.Path>()
+                                 .ToList())
+                    {
+                        if (element.Tag is not ArrowElement arrow)
+                            continue;
+
+
+                        if (arrow.SourceId == shapeId ||
+                            arrow.TargetId == shapeId)
+                        {
+                            WhiteBoardCanvas.Children.Remove(
+                                element);
+                        }
+                    }
+
+
+                    // ------------------------------------------------
+                    // Pfeile aus Datenmodell entfernen
+                    // ------------------------------------------------
+
+                    foreach (var arrow in connectedArrows)
+                    {
+                        _arrows.Remove(arrow);
+                    }
+
+
+                    // ------------------------------------------------
+                    // Shape entfernen
+                    // ------------------------------------------------
+
+                    WhiteBoardCanvas.Children.Remove(
+                        shapeControl);
+                }
+
+
+                // ----------------------------------------------------
+                // Auswahl zurücksetzen
+                // ----------------------------------------------------
+
+                _selectedShapes.Clear();
+
+                _selectedShape = null;
+
+                _selectedArrow = null;
+
+
+                StatusText.Text =
+                    $"{shapesToDelete.Count} Shapes gelöscht";
+
+                return;
+            }
+
+
+            // ========================================================
+            // Einzelnes Shape
+            // ========================================================
+
             if (_selectedShape == null)
             {
-                StatusText.Text = "Kein Shape ausgewählt";
+                StatusText.Text =
+                    "Kein Shape ausgewählt";
 
                 return;
             }
 
 
-            if (_selectedShape.Tag is not ShapeElement shapeModel)
+            if (_selectedShape.Tag is not ShapeElement shapeModelSingle)
             {
                 return;
             }
 
 
-            Guid shapeId = shapeModel.Id;
+            Guid shapeIdSingle =
+                shapeModelSingle.Id;
 
 
             // ========================================================
-            // Alle Pfeile ermitteln, die mit dem Shape verbunden sind
+            // Verbundene Pfeile
             // ========================================================
 
-            var connectedArrows = _arrows
-                .Where(arrow =>
-                    arrow.SourceId == shapeId ||
-                    arrow.TargetId == shapeId)
-                .ToList();
+            var connectedArrowsSingle =
+                _arrows
+                    .Where(arrow =>
+                        arrow.SourceId == shapeIdSingle ||
+                        arrow.TargetId == shapeIdSingle)
+                    .ToList();
 
 
             // ========================================================
-            // Pfeildarstellungen aus dem Canvas entfernen
+            // Pfeildarstellungen entfernen
             // ========================================================
 
-            foreach (var element in WhiteBoardCanvas.Children
+            foreach (var element in
+                     WhiteBoardCanvas.Children
                          .OfType<System.Windows.Shapes.Path>()
                          .ToList())
             {
@@ -2138,27 +2236,24 @@
                     continue;
 
 
-                if (arrow.SourceId == shapeId ||
-                    arrow.TargetId == shapeId)
+                if (arrow.SourceId == shapeIdSingle ||
+                    arrow.TargetId == shapeIdSingle)
                 {
-                    WhiteBoardCanvas.Children.Remove(element);
+                    WhiteBoardCanvas.Children.Remove(
+                        element);
                 }
             }
 
 
             // ========================================================
-            // Pfeile aus dem Datenmodell entfernen
+            // Pfeile aus Datenmodell entfernen
             // ========================================================
 
-            foreach (var arrow in connectedArrows)
+            foreach (var arrow in connectedArrowsSingle)
             {
                 _arrows.Remove(arrow);
             }
 
-
-            // ========================================================
-            // Eventuelle Pfeilauswahl entfernen
-            // ========================================================
 
             _selectedArrow = null;
 
@@ -2167,7 +2262,8 @@
             // Shape entfernen
             // ========================================================
 
-            WhiteBoardCanvas.Children.Remove(_selectedShape);
+            WhiteBoardCanvas.Children.Remove(
+                _selectedShape);
 
 
             _selectedShape = null;
@@ -2175,6 +2271,7 @@
 
             StatusText.Text = "Shape und verbundene Pfeile gelöscht";
         }
+
 
         // ============================================================
         // Board leeren
@@ -2906,14 +3003,14 @@
             {
                 SelectTextElement(grid);
 
+
                 if (grid.Children
                     .OfType<TextBox>()
                     .FirstOrDefault() is TextBox textBox)
                 {
                     textBox.IsReadOnly = false;
 
-                    textBox.Cursor =
-                        Cursors.IBeam;
+                    textBox.Cursor = Cursors.IBeam;
 
                     textBox.Focus();
 
@@ -2927,22 +3024,43 @@
 
 
             // ========================================================
-            // Einfacher Klick -> Text auswählen + verschieben
+            // Strg -> Mehrfachauswahl
+            // ========================================================
+
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                if (IsTextSelected(grid))
+                {
+                    RemoveTextFromSelection(grid);
+
+                    _selectedTextElement = _selectedTextElements.LastOrDefault();
+                }
+                else
+                {
+                    AddTextToSelection(grid);
+
+                    _selectedTextElement = grid;
+                }
+
+                e.Handled = true;
+
+                return;
+            }
+
+
+            // ========================================================
+            // Einfacher Klick -> Einzelauswahl
             // ========================================================
 
             SelectTextElement(grid);
 
+
             _isDraggingText = true;
 
-            _textDragStartMousePosition =
-                e.GetPosition(
-                    WhiteBoardCanvas);
+            _textDragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
 
-            _textDragStartX =
-                text.X;
-
-            _textDragStartY =
-                text.Y;
+            _textDragStartX = text.X;
+            _textDragStartY = text.Y;
 
             grid.CaptureMouse();
 
@@ -2950,9 +3068,7 @@
         }
 
 
-        private void TextElement_PreviewMouseMove(
-            object sender,
-            MouseEventArgs e)
+        private void TextElement_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (_isResizing)
                 return;
@@ -2970,39 +3086,18 @@
                 return;
 
 
-            Point currentPosition =
-                e.GetPosition(
-                    WhiteBoardCanvas);
+            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
 
 
-            double deltaX =
-                currentPosition.X -
-                _textDragStartMousePosition.X;
+            double deltaX = currentPosition.X - _textDragStartMousePosition.X;
+            double deltaY = currentPosition.Y - _textDragStartMousePosition.Y;
 
 
-            double deltaY =
-                currentPosition.Y -
-                _textDragStartMousePosition.Y;
+            double newX = _textDragStartX + deltaX;
+            double newY = _textDragStartY + deltaY;
 
-
-            double newX =
-                _textDragStartX +
-                deltaX;
-
-
-            double newY =
-                _textDragStartY +
-                deltaY;
-
-
-            Canvas.SetLeft(
-                grid,
-                newX);
-
-
-            Canvas.SetTop(
-                grid,
-                newY);
+            Canvas.SetLeft(grid, newX);
+            Canvas.SetTop(grid, newY);
 
 
             text.X = newX;
@@ -3037,54 +3132,70 @@
 
         private void SelectTextElement(Grid? textControl)
         {
-            // --------------------------------------------------------
-            // Alte Shape-Auswahl entfernen
-            // --------------------------------------------------------
+            // ========================================================
+            // Pfeilauswahl aufheben
+            // ========================================================
+
+            if (_selectedArrow != null)
+            {
+                SelectArrow(null);
+            }
+
+
+            // ========================================================
+            // Shape-Auswahl aufheben
+            // ========================================================
+
+            foreach (Grid shape in _selectedShapes.ToList())
+            {
+                SetShapeSelectedVisual(shape, false);
+
+                SetResizeHandlesVisibility(shape, Visibility.Collapsed);
+            }
+
+            _selectedShapes.Clear();
+
 
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    false);
+                SetShapeSelectedVisual(_selectedShape, false);
 
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Collapsed);
+                SetResizeHandlesVisibility(_selectedShape, Visibility.Collapsed);
 
                 _selectedShape = null;
             }
 
 
-            // --------------------------------------------------------
-            // Alte Text-Auswahl entfernen
-            // --------------------------------------------------------
+            // ========================================================
+            // Alte Textauswahl entfernen
+            // ========================================================
 
-            if (_selectedTextElement != null &&
-                _selectedTextElement != textControl)
+            foreach (Grid text in
+                     _selectedTextElements.ToList())
             {
-                SetResizeHandlesVisibility(
-                    _selectedTextElement,
-                    Visibility.Collapsed);
+                if (text != textControl)
+                {
+                    SetResizeHandlesVisibility(text, Visibility.Collapsed);
+                }
             }
 
-
-            // --------------------------------------------------------
-            // Neue Text-Auswahl
-            // --------------------------------------------------------
-
-            _selectedTextElement =
-                textControl;
+            _selectedTextElements.Clear();
 
 
-            if (_selectedTextElement != null)
+            // ========================================================
+            // Neue Auswahl
+            // ========================================================
+
+            _selectedTextElement = textControl;
+
+
+            if (textControl != null)
             {
-                SetResizeHandlesVisibility(
-                    _selectedTextElement,
-                    Visibility.Visible);
+                _selectedTextElements.Add(textControl);
 
-                Panel.SetZIndex(
-                    _selectedTextElement,
-                    GetHighestZIndex() + 1);
+                SetResizeHandlesVisibility(textControl, Visibility.Visible);
+
+                Panel.SetZIndex(textControl, GetHighestZIndex() + 1);
             }
         }
 
@@ -3121,7 +3232,6 @@
         // ============================================================
         // Shapes, Pfeile, Text löschen
         // ============================================================
-
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key != Key.Delete)
@@ -3148,7 +3258,7 @@
 
             if (_selectedShape != null)
             {
-                DeleteSelectedShape();
+                DeleteSelectedShapes();
 
                 return;
             }
@@ -3178,8 +3288,7 @@
             }
 
 
-            StatusText.Text =
-                "Kein Element ausgewählt";
+            StatusText.Text = "Kein Element ausgewählt";
         }
 
         private void DeleteSelectedShape()
@@ -3192,8 +3301,7 @@
                 return;
 
 
-            Guid shapeId =
-                shapeModel.Id;
+            Guid shapeId = shapeModel.Id;
 
 
             // ========================================================
@@ -3256,6 +3364,116 @@
             StatusText.Text = "Shape und verbundene Pfeile gelöscht";
         }
 
+        private void DeleteSelectedShapes()
+        {
+            // ========================================================
+            // Keine Shape-Auswahl
+            // ========================================================
+
+            if (_selectedShapes.Count == 0)
+            {
+                if (_selectedShape != null)
+                {
+                    _selectedShapes.Add(_selectedShape);
+                }
+                else
+                {
+                    StatusText.Text = "Kein Shape ausgewählt";
+                    return;
+                }
+            }
+
+
+            // ========================================================
+            // Alle ausgewählten Shapes merken
+            // ========================================================
+
+            var shapesToDelete =
+                _selectedShapes
+                    .Where(shape =>
+                        shape.Tag is ShapeElement)
+                    .ToList();
+
+
+            // ========================================================
+            // Für jedes Shape:
+            // verbundene Pfeile entfernen
+            // ========================================================
+
+            foreach (Grid shapeControl in shapesToDelete)
+            {
+                if (shapeControl.Tag is not ShapeElement shapeModel)
+                    continue;
+
+
+                Guid shapeId =
+                    shapeModel.Id;
+
+
+                // ----------------------------------------------------
+                // Pfeile im Canvas entfernen
+                // ----------------------------------------------------
+
+                foreach (var element in
+                         WhiteBoardCanvas.Children
+                             .OfType<System.Windows.Shapes.Path>()
+                             .ToList())
+                {
+                    if (element.Tag is not ArrowElement arrow)
+                        continue;
+
+
+                    if (arrow.SourceId == shapeId ||
+                        arrow.TargetId == shapeId)
+                    {
+                        WhiteBoardCanvas.Children.Remove(
+                            element);
+                    }
+                }
+
+
+                // ----------------------------------------------------
+                // Pfeile aus Modell entfernen
+                // ----------------------------------------------------
+
+                var connectedArrows =
+                    _arrows
+                        .Where(arrow =>
+                            arrow.SourceId == shapeId ||
+                            arrow.TargetId == shapeId)
+                        .ToList();
+
+
+                foreach (var arrow in connectedArrows)
+                {
+                    _arrows.Remove(arrow);
+                }
+
+
+                // ----------------------------------------------------
+                // Shape entfernen
+                // ----------------------------------------------------
+
+                WhiteBoardCanvas.Children.Remove(
+                    shapeControl);
+            }
+
+
+            // ========================================================
+            // Auswahl zurücksetzen
+            // ========================================================
+
+            _selectedShapes.Clear();
+
+            _selectedShape = null;
+
+            _selectedArrow = null;
+
+
+            StatusText.Text =
+                $"{shapesToDelete.Count} Shapes gelöscht";
+        }
+
         private void DeleteSelectedArrow()
         {
             if (_selectedArrow == null)
@@ -3278,6 +3496,40 @@
             StatusText.Text = "Pfeil gelöscht";
         }
 
+        // ============================================================
+        // Shapes, Pfeile, Text mehrfachauswahl
+        // ============================================================
+        private void AddTextToSelection(Grid textControl)
+        {
+            if (_selectedTextElements.Contains(textControl))
+                return;
+
+
+            _selectedTextElements.Add(textControl);
+
+
+            SetResizeHandlesVisibility(textControl, Visibility.Visible);
+        }
+
+        private void RemoveTextFromSelection(Grid textControl)
+        {
+            if (!_selectedTextElements.Remove(textControl))
+                return;
+
+
+            SetResizeHandlesVisibility(textControl, Visibility.Collapsed);
+
+
+            if (_selectedTextElement == textControl)
+            {
+                _selectedTextElement = _selectedTextElements.LastOrDefault();
+            }
+        }
+
+        private bool IsTextSelected(Grid textControl)
+        {
+            return _selectedTextElements.Contains(textControl);
+        }
         // ============================================================
         // Resize-Richtungen
         // ============================================================
