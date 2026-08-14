@@ -6,8 +6,8 @@
     xmlns:local="clr-namespace:WhiteboardWPF"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="MainWindow"
-    Width="800"
-    Height="500"
+    Width="900"
+    Height="600"
     PreviewKeyDown="Window_PreviewKeyDown"
     mc:Ignorable="d">
 
