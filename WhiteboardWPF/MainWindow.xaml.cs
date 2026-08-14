@@ -18,12 +18,16 @@
     /// </summary>
     public partial class MainWindow : Window
     {
+        // ============================================================
+        // Verschieben von Shapes und Text-Elemente
+        // ============================================================
         private Point _contextMenuPosition;
         private Grid? _selectedShape;
         private bool _isDragging;
         private Point _dragStartMousePosition;
         private double _dragStartShapeX;
         private double _dragStartShapeY;
+        private readonly Dictionary<Grid, Point> _multiDragStartTextPositions = new();
 
         // ============================================================
         // Text-Elemente
@@ -572,8 +576,7 @@
             // Doppelklick auf Text
             // ========================================================
 
-            if (e.ClickCount >= 2 &&
-                e.OriginalSource is TextBox)
+            if (e.ClickCount >= 2 && e.OriginalSource is TextBox)
             {
                 return;
             }
@@ -615,13 +618,12 @@
                 // Wenn bereits mehrere Shapes ausgewählt sind und
                 // auf eines dieser Shapes geklickt wird, soll die
                 // bestehende Mehrfachauswahl erhalten bleiben.
-                if (_selectedShapes.Count > 1 && IsShapeSelected(shape))
+                if (IsShapeSelected(shape) && (_selectedShapes.Count > 1 || _selectedTextElements.Count > 0))
                 {
                     _selectedShape = shape;
                 }
                 else
                 {
-                    // Normaler Einzelklick auf ein nicht ausgewähltes Shape
                     SelectSingleShape(shape);
                 }
             }
@@ -634,7 +636,11 @@
 
             _dragStartShapeY = Canvas.GetTop(shape);
 
-            if (_selectedShapes.Count > 1)
+            if (_selectedShapes.Count > 0 && _selectedTextElements.Count > 0)
+            {
+                StartMultiElementDrag();
+            }
+            else if (_selectedShapes.Count > 1)
             {
                 StartMultiDrag();
             }
@@ -1394,34 +1400,39 @@
                 return;
 
 
-            Point currentPosition =
-                e.GetPosition(
-                    WhiteBoardCanvas);
+            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
 
-
-            double deltaX =
-                currentPosition.X -
-                _dragStartMousePosition.X;
-
-
-            double deltaY =
-                currentPosition.Y -
-                _dragStartMousePosition.Y;
+            double deltaX = currentPosition.X - _dragStartMousePosition.X;
+            double deltaY = currentPosition.Y - _dragStartMousePosition.Y;
 
 
             // ========================================================
             // Mehrfachauswahl
             // ========================================================
 
-            if (_selectedShapes.Count > 1)
+            if (_selectedShapes.Count > 0 &&
+                _selectedTextElements.Count > 0)
             {
-                MoveSelectedShapes(deltaX, deltaY);
+                MoveSelectedElements(
+                    deltaX,
+                    deltaY);
 
                 e.Handled = true;
 
                 return;
             }
 
+
+            if (_selectedShapes.Count > 1)
+            {
+                MoveSelectedShapes(
+                    deltaX,
+                    deltaY);
+
+                e.Handled = true;
+
+                return;
+            }
 
             // ========================================================
             // Einzelnes Shape
@@ -2719,6 +2730,103 @@
             }
         }
 
+        private void StartMultiElementDrag()
+        {
+            _multiDragStartPositions.Clear();
+
+            _multiDragStartTextPositions.Clear();
+
+
+            // ========================================================
+            // Shapes
+            // ========================================================
+
+            foreach (Grid shape in _selectedShapes)
+            {
+                _multiDragStartPositions[shape] =
+                    new Point(
+                        Canvas.GetLeft(shape),
+                        Canvas.GetTop(shape));
+            }
+
+
+            // ========================================================
+            // Texte
+            // ========================================================
+
+            foreach (Grid text in _selectedTextElements)
+            {
+                _multiDragStartTextPositions[text] =
+                    new Point(
+                        Canvas.GetLeft(text),
+                        Canvas.GetTop(text));
+            }
+        }
+
+        private void MoveSelectedElements(double deltaX, double deltaY)
+        {
+            // ========================================================
+            // Shapes
+            // ========================================================
+
+            foreach (Grid shape in _selectedShapes.ToList())
+            {
+                if (!_multiDragStartPositions.TryGetValue(shape, out Point start))
+                {
+                    continue;
+                }
+
+
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
+
+                Canvas.SetLeft(shape, newX);
+                Canvas.SetTop(shape, newY);
+
+                if (shape.Tag is ShapeElement model)
+                {
+                    model.X = newX;
+                    model.Y = newY;
+                }
+            }
+
+
+            // ========================================================
+            // Texte
+            // ========================================================
+
+            foreach (Grid textControl in _selectedTextElements.ToList())
+            {
+                if (!_multiDragStartTextPositions.TryGetValue(textControl, out Point start))
+                {
+                    continue;
+                }
+
+
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
+
+                Canvas.SetLeft(textControl, newX);
+                Canvas.SetTop(textControl, newY);
+
+                if (textControl.Tag is TextElement model)
+                {
+                    model.X = newX;
+                    model.Y = newY;
+                }
+            }
+
+
+            // ========================================================
+            // Pfeile aktualisieren
+            // ========================================================
+
+            UpdateArrows();
+
+
+            StatusText.Text = $"{_selectedShapes.Count} Shape(s), " + $"{_selectedTextElements.Count} Text(e) verschoben";
+        }
+
         private void AddShapeFromMenu_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not MenuItem item)
@@ -3037,7 +3145,8 @@
                 {
                     textBox.IsReadOnly = false;
 
-                    textBox.Cursor = Cursors.IBeam;
+                    textBox.Cursor =
+                        Cursors.IBeam;
 
                     textBox.Focus();
 
@@ -3054,19 +3163,23 @@
             // Strg -> Mehrfachauswahl
             // ========================================================
 
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            if ((Keyboard.Modifiers &
+                 ModifierKeys.Control) ==
+                ModifierKeys.Control)
             {
                 if (IsTextSelected(grid))
                 {
                     RemoveTextFromSelection(grid);
 
-                    _selectedTextElement = _selectedTextElements.LastOrDefault();
+                    _selectedTextElement =
+                        _selectedTextElements.LastOrDefault();
                 }
                 else
                 {
                     AddTextToSelection(grid);
 
-                    _selectedTextElement = grid;
+                    _selectedTextElement =
+                        grid;
                 }
 
                 e.Handled = true;
@@ -3076,18 +3189,58 @@
 
 
             // ========================================================
-            // Einfacher Klick -> Einzelauswahl
+            // Normale Auswahl
             // ========================================================
 
-            SelectTextElement(grid);
+            // Wenn dieses Text-Element bereits Teil einer
+            // Mehrfachauswahl ist, Auswahl beibehalten.
+            bool isPartOfMultipleSelection =
+                IsTextSelected(grid) &&
+                (
+                    _selectedTextElements.Count > 1 ||
+                    _selectedShapes.Count > 0
+                );
 
+
+            if (!isPartOfMultipleSelection)
+            {
+                SelectTextElement(grid);
+            }
+            else
+            {
+                _selectedTextElement =
+                    grid;
+            }
+
+
+            // ========================================================
+            // Verschieben starten
+            // ========================================================
 
             _isDraggingText = true;
 
-            _textDragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
+            _textDragStartMousePosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
 
-            _textDragStartX = text.X;
-            _textDragStartY = text.Y;
+            _textDragStartX =
+                text.X;
+
+            _textDragStartY =
+                text.Y;
+
+
+            // ========================================================
+            // Mehrfach-Drag
+            // ========================================================
+
+            if (_selectedTextElements.Count > 1 ||
+                (_selectedShapes.Count > 0 &&
+                 _selectedTextElements.Count > 0))
+            {
+                StartMultiElementDrag();
+            }
+
 
             grid.CaptureMouse();
 
@@ -3095,8 +3248,14 @@
         }
 
 
-        private void TextElement_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void TextElement_PreviewMouseMove(
+            object sender,
+            MouseEventArgs e)
         {
+            // ========================================================
+            // Resize hat Vorrang
+            // ========================================================
+
             if (_isResizing)
                 return;
 
@@ -3113,22 +3272,118 @@
                 return;
 
 
-            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
+            // ========================================================
+            // Shape + Text gemeinsam verschieben
+            // ========================================================
+
+            if (_selectedShapes.Count > 0 &&
+                _selectedTextElements.Count > 0)
+            {
+                Point currentPosition =
+                    e.GetPosition(
+                        WhiteBoardCanvas);
 
 
-            double deltaX = currentPosition.X - _textDragStartMousePosition.X;
-            double deltaY = currentPosition.Y - _textDragStartMousePosition.Y;
+                double deltaX =
+                    currentPosition.X -
+                    _textDragStartMousePosition.X;
 
 
-            double newX = _textDragStartX + deltaX;
-            double newY = _textDragStartY + deltaY;
-
-            Canvas.SetLeft(grid, newX);
-            Canvas.SetTop(grid, newY);
+                double deltaY =
+                    currentPosition.Y -
+                    _textDragStartMousePosition.Y;
 
 
-            text.X = newX;
-            text.Y = newY;
+                MoveSelectedElements(
+                    deltaX,
+                    deltaY);
+
+
+                e.Handled = true;
+
+                return;
+            }
+
+
+            // ========================================================
+            // Mehrere Text-Elemente gemeinsam verschieben
+            // ========================================================
+
+            if (_selectedTextElements.Count > 1)
+            {
+                Point currentPosition =
+                    e.GetPosition(
+                        WhiteBoardCanvas);
+
+
+                double deltaX =
+                    currentPosition.X -
+                    _textDragStartMousePosition.X;
+
+
+                double deltaY =
+                    currentPosition.Y -
+                    _textDragStartMousePosition.Y;
+
+
+                MoveSelectedElements(
+                    deltaX,
+                    deltaY);
+
+
+                e.Handled = true;
+
+                return;
+            }
+
+
+            // ========================================================
+            // Einzelnes Text-Element verschieben
+            // ========================================================
+
+            Point singleCurrentPosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
+
+
+            double singleDeltaX =
+                singleCurrentPosition.X -
+                _textDragStartMousePosition.X;
+
+
+            double singleDeltaY =
+                singleCurrentPosition.Y -
+                _textDragStartMousePosition.Y;
+
+
+            double newX =
+                _textDragStartX +
+                singleDeltaX;
+
+
+            double newY =
+                _textDragStartY +
+                singleDeltaY;
+
+
+            Canvas.SetLeft(
+                grid,
+                newX);
+
+            Canvas.SetTop(
+                grid,
+                newY);
+
+
+            text.X =
+                newX;
+
+            text.Y =
+                newY;
+
+
+            StatusText.Text =
+                $"Text: X={newX:0}, Y={newY:0}";
 
 
             e.Handled = true;
