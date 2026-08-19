@@ -66,9 +66,8 @@
         private readonly List<ArrowElement> _arrows = new();
         private bool _isCreatingArrow;
         private Grid? _arrowSourceShape;
-       
         private System.Windows.Shapes.Path? _selectedArrow;
-
+        private readonly List<System.Windows.Shapes.Path> _selectedArrows = new();
 
         // ============================================================
         // Mehrfachmarkierung
@@ -3662,11 +3661,16 @@
             // Pfeil
             // ========================================================
 
-            if (_selectedArrow != null)
+            // ========================================================
+            // Pfeil-Mehrfachauswahl
+            // ========================================================
+
+            foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
             {
-                SelectArrow(null);
+                SetArrowSelectedVisual(arrow, false);
             }
 
+            _selectedArrows.Clear();
 
             // ========================================================
             // Drag-Zustände zurücksetzen
@@ -3688,115 +3692,6 @@
                 "Auswahl aufgehoben";
         }
 
-        private void DeleteSelectedShapes()
-        {
-            // ========================================================
-            // Keine Shape-Auswahl
-            // ========================================================
-
-            if (_selectedShapes.Count == 0)
-            {
-                if (_selectedShape != null)
-                {
-                    _selectedShapes.Add(_selectedShape);
-                }
-                else
-                {
-                    StatusText.Text = "Kein Shape ausgewählt";
-                    return;
-                }
-            }
-
-
-            // ========================================================
-            // Alle ausgewählten Shapes merken
-            // ========================================================
-
-            var shapesToDelete =
-                _selectedShapes
-                    .Where(shape =>
-                        shape.Tag is ShapeElement)
-                    .ToList();
-
-
-            // ========================================================
-            // Für jedes Shape:
-            // verbundene Pfeile entfernen
-            // ========================================================
-
-            foreach (Grid shapeControl in shapesToDelete)
-            {
-                if (shapeControl.Tag is not ShapeElement shapeModel)
-                    continue;
-
-
-                Guid shapeId =
-                    shapeModel.Id;
-
-
-                // ----------------------------------------------------
-                // Pfeile im Canvas entfernen
-                // ----------------------------------------------------
-
-                foreach (var element in
-                         WhiteBoardCanvas.Children
-                             .OfType<System.Windows.Shapes.Path>()
-                             .ToList())
-                {
-                    if (element.Tag is not ArrowElement arrow)
-                        continue;
-
-
-                    if (arrow.SourceId == shapeId ||
-                        arrow.TargetId == shapeId)
-                    {
-                        WhiteBoardCanvas.Children.Remove(
-                            element);
-                    }
-                }
-
-
-                // ----------------------------------------------------
-                // Pfeile aus Modell entfernen
-                // ----------------------------------------------------
-
-                var connectedArrows =
-                    _arrows
-                        .Where(arrow =>
-                            arrow.SourceId == shapeId ||
-                            arrow.TargetId == shapeId)
-                        .ToList();
-
-
-                foreach (var arrow in connectedArrows)
-                {
-                    _arrows.Remove(arrow);
-                }
-
-
-                // ----------------------------------------------------
-                // Shape entfernen
-                // ----------------------------------------------------
-
-                WhiteBoardCanvas.Children.Remove(
-                    shapeControl);
-            }
-
-
-            // ========================================================
-            // Auswahl zurücksetzen
-            // ========================================================
-
-            _selectedShapes.Clear();
-
-            _selectedShape = null;
-
-            _selectedArrow = null;
-
-
-            StatusText.Text =
-                $"{shapesToDelete.Count} Shapes gelöscht";
-        }
 
         private void DeleteSelectedArrow()
         {
@@ -3893,16 +3788,47 @@
             // Pfeile auswählen
             // ========================================================
 
-            foreach (System.Windows.Shapes.Path path in WhiteBoardCanvas.Children.OfType<System.Windows.Shapes.Path>().ToList())
+            // ========================================================
+            // Pfeile auswählen
+            // ========================================================
+
+            foreach (System.Windows.Shapes.Path path in WhiteBoardCanvas.Children
+                         .OfType<System.Windows.Shapes.Path>().ToList())
             {
                 if (path.Tag is ArrowElement)
                 {
-                    SelectArrow(path);
+                    AddArrowToSelection(path);
                 }
             }
 
-
             StatusText.Text = $"{_selectedShapes.Count} Shape(s), " + $"{_selectedTextElements.Count} Text(e) " + "und Pfeile ausgewählt";
+        }
+
+        private void AddArrowToSelection(System.Windows.Shapes.Path arrow)
+        {
+            if (_selectedArrows.Contains(arrow))
+                return;
+
+
+            _selectedArrows.Add(arrow);
+
+
+            SetArrowSelectedVisual(arrow, true);
+        }
+
+        private void RemoveArrowFromSelection(System.Windows.Shapes.Path arrow)
+        {
+            if (!_selectedArrows.Remove(arrow))
+                return;
+
+
+            SetArrowSelectedVisual(arrow, false);
+
+
+            if (_selectedArrow == arrow)
+            {
+                _selectedArrow = _selectedArrows.LastOrDefault();
+            }
         }
 
         // ============================================================
