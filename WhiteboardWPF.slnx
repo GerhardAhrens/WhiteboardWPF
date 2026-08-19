@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/_Doc/">
+    <File Path="BoardFull.png" />
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>

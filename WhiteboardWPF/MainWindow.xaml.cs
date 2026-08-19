@@ -3516,6 +3516,52 @@
         // ============================================================
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            // ========================================================
+            // ESC -> Auswahl aufheben
+            // ========================================================
+
+            if (e.Key == Key.Escape)
+            {
+                if (Keyboard.FocusedElement is TextBox textBoxESC && !textBoxESC.IsReadOnly)
+                {
+                    textBoxESC.IsReadOnly = true;
+
+                    textBoxESC.Cursor =  Cursors.Arrow;
+
+                    textBoxESC.Text = textBoxESC.Text;
+
+                    textBoxESC.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+
+                    e.Handled = true;
+
+                    return;
+                }
+
+
+                this.ClearAllSelections();
+
+                e.Handled = true;
+
+                return;
+            }
+
+            // ========================================================
+            // Strg+A
+            // ========================================================
+
+            if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) ==  ModifierKeys.Control)
+            {
+                SelectAllElements();
+
+                e.Handled = true;
+
+                return;
+            }
+
+            // ========================================================
+            // Delete
+            // ========================================================
+
             if (e.Key != Key.Delete)
                 return;
 
@@ -3526,8 +3572,7 @@
             }
 
 
-            DeleteSelectedElement();
-
+            this.DeleteSelectedElement();
 
             e.Handled = true;
         }
@@ -3561,8 +3606,86 @@
             }
 
 
+            StatusText.Text = "Kein Element ausgewählt";
+        }
+
+        private void ClearAllSelections()
+        {
+            // ========================================================
+            // Shapes
+            // ========================================================
+
+            foreach (Grid shape in _selectedShapes.ToList())
+            {
+                SetShapeSelectedVisual(shape, false);
+                SetResizeHandlesVisibility(shape, Visibility.Collapsed);
+            }
+
+            _selectedShapes.Clear();
+
+
+            // ========================================================
+            // Einzelnes Shape
+            // ========================================================
+
+            if (_selectedShape != null)
+            {
+                SetShapeSelectedVisual(
+                    _selectedShape,
+                    false);
+
+                SetResizeHandlesVisibility(
+                    _selectedShape,
+                    Visibility.Collapsed);
+
+                _selectedShape = null;
+            }
+
+
+            // ========================================================
+            // Text-Elemente
+            // ========================================================
+
+            foreach (Grid text in _selectedTextElements.ToList())
+            {
+                SetResizeHandlesVisibility(
+                    text,
+                    Visibility.Collapsed);
+            }
+
+            _selectedTextElements.Clear();
+
+            _selectedTextElement = null;
+
+
+            // ========================================================
+            // Pfeil
+            // ========================================================
+
+            if (_selectedArrow != null)
+            {
+                SelectArrow(null);
+            }
+
+
+            // ========================================================
+            // Drag-Zustände zurücksetzen
+            // ========================================================
+
+            _isDragging = false;
+
+            _isDraggingText = false;
+
+            _isResizing = false;
+
+
+            _multiDragStartPositions.Clear();
+
+            _multiDragStartTextPositions.Clear();
+
+
             StatusText.Text =
-                "Kein Element ausgewählt";
+                "Auswahl aufgehoben";
         }
 
         private void DeleteSelectedShapes()
@@ -3731,6 +3854,57 @@
         {
             return _selectedTextElements.Contains(textControl);
         }
+
+        private void SelectAllElements()
+        {
+            // ========================================================
+            // Bestehende Auswahl vollständig entfernen
+            // ========================================================
+
+            ClearAllSelections();
+
+
+            // ========================================================
+            // Shapes auswählen
+            // ========================================================
+
+            foreach (Grid shape in WhiteBoardCanvas.Children
+                         .OfType<Grid>()
+                         .Where(grid =>
+                             grid.Tag is ShapeElement)
+                         .ToList())
+            {
+                AddShapeToSelection(shape);
+            }
+
+
+            // ========================================================
+            // Text-Elemente auswählen
+            // ========================================================
+
+            foreach (Grid text in WhiteBoardCanvas.Children.OfType<Grid>()
+                .Where(grid => grid.Tag is TextElement).ToList())
+            {
+                AddTextToSelection(text);
+            }
+
+
+            // ========================================================
+            // Pfeile auswählen
+            // ========================================================
+
+            foreach (System.Windows.Shapes.Path path in WhiteBoardCanvas.Children.OfType<System.Windows.Shapes.Path>().ToList())
+            {
+                if (path.Tag is ArrowElement)
+                {
+                    SelectArrow(path);
+                }
+            }
+
+
+            StatusText.Text = $"{_selectedShapes.Count} Shape(s), " + $"{_selectedTextElements.Count} Text(e) " + "und Pfeile ausgewählt";
+        }
+
         // ============================================================
         // Resize-Richtungen
         // ============================================================
