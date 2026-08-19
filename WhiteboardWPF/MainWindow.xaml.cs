@@ -52,13 +52,11 @@
         private double _resizeStartWidth;
         private double _resizeStartHeight;
 
-
         // ============================================================
         // Textbearbeitung
         // ============================================================
         private TextBox? _editingTextBox;
         private string _textBeforeEditing = string.Empty;
-
 
         // ============================================================
         // Pfeile
@@ -75,6 +73,16 @@
         private readonly List<Grid> _selectedShapes = new();
         private readonly Dictionary<Grid, Point> _multiDragStartPositions = new();
         private readonly List<Grid> _selectedTextElements = new();
+
+        // ============================================================
+        // Symbole
+        // ============================================================
+        private readonly List<SymbolElement> _symbols = new();
+        private bool _isDraggingSymbol;
+        private Point _symbolDragStartMousePosition;
+        private double _symbolDragStartX;
+        private double _symbolDragStartY;
+        private Grid? _selectedSymbol;
 
         public MainWindow()
         {
@@ -3859,47 +3867,29 @@
             if (sender is not MenuItem menuItem)
                 return;
 
-
             if (menuItem.Tag is not string colorString)
                 return;
 
 
-            // ========================================================
             // Übergeordnetes Menü "Hintergrundfarbe"
-            // ========================================================
-
             if (menuItem.Parent is not MenuItem backgroundMenu)
                 return;
 
-
-            // ========================================================
             // ContextMenu ermitteln
-            // ========================================================
-
             if (backgroundMenu.Parent is not ContextMenu contextMenu)
                 return;
 
-
-            // ========================================================
             // Shape-Control ermitteln
-            // ========================================================
 
             if (contextMenu.PlacementTarget is not Grid shapeControl)
                 return;
 
-
-            // ========================================================
             // Shape-Modell ermitteln
-            // ========================================================
 
             if (shapeControl.Tag is not ShapeElement shape)
                 return;
 
-
-            // ========================================================
             // Farbe setzen
-            // ========================================================
-
             SetShapeBackgroundColor(shapeControl, shape, colorString);
 
 
@@ -3910,10 +3900,7 @@
 
         private void SetShapeBackgroundColor(Grid shapeControl, ShapeElement shape, string colorString)
         {
-            // ========================================================
             // Farbe prüfen
-            // ========================================================
-
             Color color;
 
             try
@@ -3926,17 +3913,10 @@
             }
 
 
-            // ========================================================
             // Datenmodell aktualisieren
-            // ========================================================
-
             shape.BackgroundColor = colorString;
 
-
-            // ========================================================
             // Shape-Visual suchen
-            // ========================================================
-
             FrameworkElement? shapeVisual =
                 shapeControl.Children
                     .OfType<FrameworkElement>()
@@ -3948,18 +3928,11 @@
             if (shapeVisual == null)
                 return;
 
-
-            // ========================================================
             // Brush erzeugen
-            // ========================================================
-
             Brush brush = new SolidColorBrush(color);
 
 
-            // ========================================================
             // Hintergrund/Füllung setzen
-            // ========================================================
-
             switch (shapeVisual)
             {
                 case Border border:
@@ -3978,6 +3951,460 @@
 
 
             StatusText.Text = $"Hintergrundfarbe geändert: {colorString}";
+        }
+
+        // ============================================================
+        // Symbole mit DrawingImage
+        // ============================================================
+        private DrawingImage CreateInfoSymbol()
+        {
+            var drawingGroup =
+                new DrawingGroup();
+
+
+            using (DrawingContext dc =
+                   drawingGroup.Open())
+            {
+                // ====================================================
+                // Kreis
+                // ====================================================
+
+                var pen =
+                    new Pen(
+                        Brushes.DimGray,
+                        3);
+
+                var brush =
+                    Brushes.DodgerBlue;
+
+
+                dc.DrawEllipse(
+                    brush,
+                    pen,
+                    new Point(40, 40),
+                    36,
+                    36);
+
+
+                // ====================================================
+                // "i"
+                // ====================================================
+
+                var typeface =
+                    new Typeface(
+                        new FontFamily("Segoe UI"),
+                        FontStyles.Normal,
+                        FontWeights.Bold,
+                        FontStretches.Normal);
+
+
+                var text =
+                    new FormattedText(
+                        "i",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        FlowDirection.LeftToRight,
+                        typeface,
+                        42,
+                        Brushes.White,
+                        1.0);
+
+
+                dc.DrawText(
+                    text,
+                    new Point(
+                        34,
+                        17));
+            }
+
+
+            return new DrawingImage(
+                drawingGroup);
+        }
+
+        private Grid CreateSymbolControl(SymbolElement symbol)
+        {
+            var grid = new Grid
+            {
+                Width = symbol.Width,
+                Height = symbol.Height,
+                Tag = symbol
+            };
+
+
+            // ========================================================
+            // Symbol
+            // ========================================================
+
+            var image =
+                new Image
+                {
+                    Source =
+                        CreateInfoSymbol(),
+
+                    Stretch =
+                        Stretch.Fill,
+
+                    IsHitTestVisible = true
+                };
+
+
+            grid.Children.Add(image);
+
+
+            // ========================================================
+            // Position
+            // ========================================================
+
+            Canvas.SetLeft(grid, symbol.X);
+            Canvas.SetTop(grid, symbol.Y);
+
+            // ========================================================
+            // Verschieben
+            // ========================================================
+
+            grid.PreviewMouseLeftButtonDown += Symbol_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += Symbol_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += Symbol_PreviewMouseLeftButtonUp;
+
+
+            // ========================================================
+            // Resize
+            // ========================================================
+
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Center,
+                VerticalAlignment.Top,
+                ResizeDirection.Top);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Right,
+                VerticalAlignment.Top,
+                ResizeDirection.TopRight);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Left,
+                VerticalAlignment.Center,
+                ResizeDirection.Left);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Right,
+                VerticalAlignment.Center,
+                ResizeDirection.Right);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Left,
+                VerticalAlignment.Bottom,
+                ResizeDirection.BottomLeft);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Center,
+                VerticalAlignment.Bottom,
+                ResizeDirection.Bottom);
+
+            AddResizeThumb(
+                grid,
+                HorizontalAlignment.Right,
+                VerticalAlignment.Bottom,
+                ResizeDirection.BottomRight);
+
+
+            // ========================================================
+            // Contextmenü
+            // ========================================================
+
+            grid.ContextMenu =
+                CreateSymbolContextMenu();
+
+
+            return grid;
+        }
+
+        private ContextMenu CreateSymbolContextMenu()
+        {
+            var contextMenu = new ContextMenu();
+
+
+            var deleteItem = new MenuItem
+                {
+                    Header = "Löschen"
+                };
+
+
+            deleteItem.Click += SymbolDelete_Click;
+
+
+            contextMenu.Items.Add(deleteItem);
+
+
+            return contextMenu;
+        }
+
+        private void SymbolDelete_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+
+            if (menuItem.Parent is not ContextMenu contextMenu)
+                return;
+
+
+            if (contextMenu.PlacementTarget is not Grid grid)
+                return;
+
+
+            DeleteSymbol(grid);
+        }
+
+        private void DeleteSymbol(Grid symbolControl)
+        {
+            if (symbolControl.Tag is not SymbolElement symbol)
+                return;
+
+
+            // ========================================================
+            // Aus Datenmodell entfernen
+            // ========================================================
+
+            _symbols.Remove(symbol);
+
+
+            // ========================================================
+            // Auswahl entfernen
+            // ========================================================
+
+            if (_selectedSymbol == symbolControl)
+            {
+                _selectedSymbol = null;
+            }
+
+            SetSymbolSelectedVisual(symbolControl, false);
+            SetResizeHandlesVisibility(symbolControl, Visibility.Collapsed);
+
+            // ========================================================
+            // Control vom Canvas entfernen
+            // ========================================================
+
+            WhiteBoardCanvas.Children.Remove(symbolControl);
+
+            StatusText.Text = "Symbol gelöscht";
+        }
+
+        private void AddSymbol_Click(object sender, RoutedEventArgs e)
+        {
+            AddSymbol();
+
+            e.Handled = true;
+        }
+
+        private void AddSymbol()
+        {
+            var symbol =
+                new SymbolElement
+                {
+                    X = _contextMenuPosition.X,
+                    Y = _contextMenuPosition.Y,
+
+                    Width = 80,
+                    Height = 80,
+
+                    SymbolType = "Info"
+                };
+
+
+            _symbols.Add(symbol);
+
+
+            var control = CreateSymbolControl(symbol);
+
+            WhiteBoardCanvas.Children.Add(control);
+
+
+            StatusText.Text = "Symbol erstellt";
+
+            WhiteBoardContextMenu.IsOpen = false;
+        }
+
+        private void Symbol_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid grid)
+                return;
+
+
+            if (grid.Tag is not SymbolElement symbol)
+                return;
+
+
+            // ========================================================
+            // Resize-Griffe
+            // ========================================================
+
+            if (IsResizeThumbSource(
+                    e.OriginalSource as DependencyObject))
+            {
+                return;
+            }
+
+
+            // ========================================================
+            // Symbol auswählen
+            // ========================================================
+
+            ClearAllSelections();
+
+
+            _selectedSymbol = grid;
+
+
+            SetSymbolSelectedVisual(
+                grid,
+                true);
+
+
+            SetResizeHandlesVisibility(
+                grid,
+                Visibility.Visible);
+
+
+            // ========================================================
+            // Drag vorbereiten
+            // ========================================================
+
+            _isDraggingSymbol = true;
+
+
+            _symbolDragStartMousePosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
+
+
+            _symbolDragStartX =
+                symbol.X;
+
+
+            _symbolDragStartY =
+                symbol.Y;
+
+
+            grid.CaptureMouse();
+
+
+            e.Handled = true;
+        }
+
+        private void Symbol_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDraggingSymbol)
+                return;
+
+
+            if (sender is not Grid grid)
+                return;
+
+
+            if (grid.Tag is not SymbolElement symbol)
+                return;
+
+
+            Point currentPosition =
+                e.GetPosition(
+                    WhiteBoardCanvas);
+
+
+            double deltaX =
+                currentPosition.X -
+                _symbolDragStartMousePosition.X;
+
+
+            double deltaY =
+                currentPosition.Y -
+                _symbolDragStartMousePosition.Y;
+
+
+            double newX =
+                _symbolDragStartX +
+                deltaX;
+
+
+            double newY =
+                _symbolDragStartY +
+                deltaY;
+
+
+            Canvas.SetLeft(
+                grid,
+                newX);
+
+            Canvas.SetTop(
+                grid,
+                newY);
+
+
+            symbol.X =
+                newX;
+
+            symbol.Y =
+                newY;
+
+
+            StatusText.Text = $"Symbol: X={newX:0}, Y={newY:0}";
+
+            e.Handled = true;
+        }
+
+        private void SetSymbolSelectedVisual(Grid symbol, bool selected)
+        {
+            if (symbol.Children
+                .OfType<Image>()
+                .FirstOrDefault() is not Image image)
+            {
+                return;
+            }
+
+
+            if (selected)
+            {
+                image.Opacity = 0.75;
+            }
+            else
+            {
+                image.Opacity = 1.0;
+            }
+        }
+
+        private void Symbol_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid grid)
+                return;
+
+
+            if (!_isDraggingSymbol)
+                return;
+
+
+            _isDraggingSymbol = false;
+
+
+            if (grid.IsMouseCaptured)
+            {
+                grid.ReleaseMouseCapture();
+            }
+
+
+            if (grid.Tag is SymbolElement symbol)
+            {
+                StatusText.Text = $"Symbol positioniert: " + $"X={symbol.X:0}, Y={symbol.Y:0}";
+            }
+
+
+            e.Handled = true;
         }
 
         // ============================================================

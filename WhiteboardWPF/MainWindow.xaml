@@ -96,7 +96,10 @@
                     Height="32"
                     Content="B" />
 
-                <Separator Grid.Row="3" BorderBrush="Gray" Height="10" />
+                <Separator
+                    Grid.Row="3"
+                    Height="10"
+                    BorderBrush="Gray" />
 
                 <Button
                     Grid.Row="4"
@@ -191,6 +194,9 @@
 
                             <MenuItem Click="AddArrow_Click" Header="Pfeil" />
 
+                            <Separator />
+
+                            <MenuItem Click="AddSymbol_Click" Header="Symbol" />
                         </MenuItem>
 
                         <Separator />
