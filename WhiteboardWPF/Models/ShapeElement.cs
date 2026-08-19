@@ -15,5 +15,6 @@
         public double Height { get; set; } = 90;
 
         public string Text { get; set; } = string.Empty;
+        public string BackgroundColor { get; set; } = "#FFFFFFFF";
     }
 }

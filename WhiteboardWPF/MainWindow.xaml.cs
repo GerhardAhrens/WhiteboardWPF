@@ -151,6 +151,10 @@
             var contextMenu = new ContextMenu();
 
 
+            // ========================================================
+            // Text bearbeiten
+            // ========================================================
+
             var editTextItem = new MenuItem
             {
                 Header = "Text bearbeiten"
@@ -160,6 +164,32 @@
 
             contextMenu.Items.Add(editTextItem);
 
+
+            // ========================================================
+            // Trennlinie
+            // ========================================================
+
+            contextMenu.Items.Add(
+                new Separator());
+
+
+            // ========================================================
+            // Hintergrundfarbe
+            // ========================================================
+
+            var backgroundColorMenuItem = new MenuItem
+            {
+                Header = "Hintergrundfarbe"
+            };
+
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Weiß","#FFFFFFFF"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellgelb", "#FFFFF2CC"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellgrün", "#FFD9EAD3"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellblau", "#FFD9EAF7"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellrot", "#FFF4CCCC"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellgrau", "#FFE7E6E6"));
+
+            contextMenu.Items.Add(backgroundColorMenuItem);
 
             return contextMenu;
         }
@@ -1844,17 +1874,10 @@
                     {
                         return new Border
                         {
-                            Background = Brushes.White,
-
-                            BorderBrush =
-                                Brushes.DimGray,
-
-                            BorderThickness =
-                                new Thickness(2),
-
-                            CornerRadius =
-                                new CornerRadius(0),
-
+                            Background = this.GetShapeBackgroundBrush(shape),
+                            BorderBrush = Brushes.DimGray,
+                            BorderThickness = new Thickness(2),
+                            CornerRadius = new CornerRadius(0),
                             IsHitTestVisible = true
                         };
                     }
@@ -1864,17 +1887,10 @@
                     {
                         return new Border
                         {
-                            Background = Brushes.White,
-
-                            BorderBrush =
-                                Brushes.DimGray,
-
-                            BorderThickness =
-                                new Thickness(2),
-
-                            CornerRadius =
-                                new CornerRadius(15),
-
+                            Background = this.GetShapeBackgroundBrush(shape),
+                            BorderBrush = Brushes.DimGray,
+                            BorderThickness = new Thickness(2),
+                            CornerRadius = new CornerRadius(15),
                             IsHitTestVisible = true
                         };
                     }
@@ -1884,13 +1900,9 @@
                     {
                         return new System.Windows.Shapes.Ellipse
                         {
-                            Fill = Brushes.White,
-
-                            Stroke =
-                                Brushes.DimGray,
-
+                            Fill = this.GetShapeBackgroundBrush(shape),
+                            Stroke = Brushes.DimGray,
                             StrokeThickness = 2,
-
                             IsHitTestVisible = true
                         };
                     }
@@ -1900,12 +1912,9 @@
                     {
                         return new System.Windows.Shapes.Polygon
                         {
-                            Fill = Brushes.White,
-
+                            Fill = this.GetShapeBackgroundBrush(shape),
                             Stroke = Brushes.DimGray,
-
                             StrokeThickness = 2,
-
                             Points = new PointCollection
                                         {
                                             new Point(0.5, 0),
@@ -1915,7 +1924,6 @@
                                         },
 
                             Stretch = Stretch.Fill,
-
                             IsHitTestVisible = true
                         };
                     }
@@ -2846,12 +2854,9 @@
         {
             return new System.Windows.Shapes.Polygon
             {
-                Fill = Brushes.White,
-
+                Fill = this.GetShapeBackgroundBrush(shape),
                 Stroke = Brushes.DimGray,
-
                 StrokeThickness = 2,
-
                 Points = new PointCollection
                     {
                         new Point(0.5, 0),
@@ -2871,7 +2876,7 @@
         {
             return new System.Windows.Shapes.Polygon
             {
-                Fill = Brushes.White,
+                Fill = this.GetShapeBackgroundBrush(shape),
                 Stroke = Brushes.DimGray,
                 StrokeThickness = 2,
                 Points = new PointCollection
@@ -2887,6 +2892,21 @@
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = true
             };
+        }
+
+        private MenuItem CreateBackgroundColorMenuItem(string name, string color)
+        {
+            var menuItem = new MenuItem
+            {
+                Header = name,
+                Tag = color
+            };
+
+
+            menuItem.Click += ShapeBackgroundColor_Click;
+
+
+            return menuItem;
         }
 
         // ============================================================
@@ -3816,19 +3836,148 @@
             SetArrowSelectedVisual(arrow, true);
         }
 
-        private void RemoveArrowFromSelection(System.Windows.Shapes.Path arrow)
+        // ============================================================
+        // Shape Color
+        // ============================================================
+
+        private Brush GetShapeBackgroundBrush(ShapeElement shape)
         {
-            if (!_selectedArrows.Remove(arrow))
+            try
+            {
+                var color = (Color)ColorConverter.ConvertFromString(shape.BackgroundColor);
+
+                return new SolidColorBrush(color);
+            }
+            catch
+            {
+                return Brushes.White;
+            }
+        }
+
+        private void ShapeBackgroundColor_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
                 return;
 
 
-            SetArrowSelectedVisual(arrow, false);
+            if (menuItem.Tag is not string colorString)
+                return;
 
 
-            if (_selectedArrow == arrow)
+            // ========================================================
+            // Übergeordnetes Menü "Hintergrundfarbe"
+            // ========================================================
+
+            if (menuItem.Parent is not MenuItem backgroundMenu)
+                return;
+
+
+            // ========================================================
+            // ContextMenu ermitteln
+            // ========================================================
+
+            if (backgroundMenu.Parent is not ContextMenu contextMenu)
+                return;
+
+
+            // ========================================================
+            // Shape-Control ermitteln
+            // ========================================================
+
+            if (contextMenu.PlacementTarget is not Grid shapeControl)
+                return;
+
+
+            // ========================================================
+            // Shape-Modell ermitteln
+            // ========================================================
+
+            if (shapeControl.Tag is not ShapeElement shape)
+                return;
+
+
+            // ========================================================
+            // Farbe setzen
+            // ========================================================
+
+            SetShapeBackgroundColor(shapeControl, shape, colorString);
+
+
+            contextMenu.IsOpen = false;
+
+            e.Handled = true;
+        }
+
+        private void SetShapeBackgroundColor(Grid shapeControl, ShapeElement shape, string colorString)
+        {
+            // ========================================================
+            // Farbe prüfen
+            // ========================================================
+
+            Color color;
+
+            try
             {
-                _selectedArrow = _selectedArrows.LastOrDefault();
+                color = (Color)ColorConverter.ConvertFromString(colorString);
             }
+            catch
+            {
+                return;
+            }
+
+
+            // ========================================================
+            // Datenmodell aktualisieren
+            // ========================================================
+
+            shape.BackgroundColor = colorString;
+
+
+            // ========================================================
+            // Shape-Visual suchen
+            // ========================================================
+
+            FrameworkElement? shapeVisual =
+                shapeControl.Children
+                    .OfType<FrameworkElement>()
+                    .FirstOrDefault(element =>
+                        element is Border ||
+                        element is System.Windows.Shapes.Shape);
+
+
+            if (shapeVisual == null)
+                return;
+
+
+            // ========================================================
+            // Brush erzeugen
+            // ========================================================
+
+            Brush brush = new SolidColorBrush(color);
+
+
+            // ========================================================
+            // Hintergrund/Füllung setzen
+            // ========================================================
+
+            switch (shapeVisual)
+            {
+                case Border border:
+
+                    border.Background = brush;
+
+                    break;
+
+
+                case System.Windows.Shapes.Shape visual:
+
+                    visual.Fill = brush;
+
+                    break;
+            }
+
+
+            StatusText.Text = $"Hintergrundfarbe geändert: {colorString}";
         }
 
         // ============================================================
