@@ -9,5 +9,7 @@
         public List<ArrowElement> Arrows { get; set; } = new();
 
         public List<TextElement> TextElements { get; set; } = new();
+
+        public List<SymbolElement> Symbols { get; set; } = new();
     }
 }
