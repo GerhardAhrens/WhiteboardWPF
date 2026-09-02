@@ -1,0 +1,150 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--#region XAML Icon Quelle-->
+    <!--
+        https://pictogrammers.com/library/mdi/ (als DrawingImage)
+        https://petershaggynoble.github.io/MDI-Sandbox/ (als Canvas)
+        **********************************************************************
+        In der Regel werden nur die direkten Vector-Daten verwendet. In einigen Fällen kann es aber hilfreich sein, das komplette
+        DrawingImage zu verwenden, da dies direkt einem Image zugewiesen werden kann.
+    -->
+    <!--#endregion XAML Icon Quelle-->
+
+    <!--#region Farbige Icon Symbole auf Basis von DrawingImage-->
+    <DrawingImage x:Key="WhiteboardIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+
+                <!--  =========================  -->
+                <!--  Whiteboard  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing Brush="White">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FF707070" Thickness="1" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry
+                            RadiusX="2"
+                            RadiusY="2"
+                            Rect="2,3,24,18" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  =========================  -->
+                <!--  Kopfzeile / Board-Leiste  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing Brush="#FF1F5AA6">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,3,24,4" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  =========================  -->
+                <!--  Notiz links  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing Brush="#FFFFF4B0">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FFB0A060" Thickness="0.7" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry
+                            RadiusX="0.5"
+                            RadiusY="0.5"
+                            Rect="5,10,7,6" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  Notizlinien links  -->
+                <GeometryDrawing Brush="#FFB0B0B0">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="6,12,5,0.7" />
+                            <RectangleGeometry Rect="6,14,4,0.7" />
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  =========================  -->
+                <!--  Notiz rechts  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing Brush="#FFE0F2E9">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FF80A890" Thickness="0.7" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry
+                            RadiusX="0.5"
+                            RadiusY="0.5"
+                            Rect="14,10,7,6" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  Notizlinien rechts  -->
+                <GeometryDrawing Brush="#FFB0B0B0">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="15,12,5,0.7" />
+                            <RectangleGeometry Rect="15,14,4,0.7" />
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  =========================  -->
+                <!--  Whiteboard-Stift  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing Brush="#FF606060">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FF505050" Thickness="0.6" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <Geometry>
+                            M19,17
+                            L23,21
+                            L21.5,22.5
+                            L17.5,18.5
+                            Z
+                        </Geometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  Stiftspitze  -->
+                <GeometryDrawing Brush="#FF404040">
+                    <GeometryDrawing.Geometry>
+                        <Geometry>
+                            M19,20
+                            L21.5,22.5
+                            L18.5,21
+                            Z
+                        </Geometry>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <!--  =========================  -->
+                <!--  Board-Füße  -->
+                <!--  =========================  -->
+
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FF707070" Thickness="1" />
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <LineGeometry StartPoint="7,21" EndPoint="7,24" />
+
+                            <LineGeometry StartPoint="21,21" EndPoint="21,24" />
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!--#endregion Farbige Icon Symbole auf Basis von DrawingImage-->
+
+</ResourceDictionary>

@@ -6,6 +6,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\Picture\WhiteboardIcon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\Picture\WhiteboardIcon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\Style\" />
+  </ItemGroup>
 
 </Project>
