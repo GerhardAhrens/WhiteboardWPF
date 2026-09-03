@@ -161,66 +161,65 @@
             BorderBrush="{StaticResource BoardBorderBrush}"
             BorderThickness="1">
 
-            <Canvas
-                x:Name="WhiteBoardCanvas"
-                Background="{StaticResource BoardBackgroundBrush}"
-                MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown"
-                MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
 
+                <Canvas
+                    x:Name="WhiteBoardCanvas"
+                    Width="800"
+                    Height="600"
+                    Background="{StaticResource BoardBackgroundBrush}"
+                    MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown"
+                    MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown">
 
-                <!--  =================================================  -->
-                <!--  Contextmenü  -->
-                <!--  =================================================  -->
+                    <Canvas.ContextMenu>
 
-                <Canvas.ContextMenu>
+                        <ContextMenu x:Name="WhiteBoardContextMenu" BorderBrush="{StaticResource MenuBorderBrush}">
 
-                    <ContextMenu x:Name="WhiteBoardContextMenu" BorderBrush="{StaticResource MenuBorderBrush}">
+                            <MenuItem Header="Neues Element">
 
-                        <MenuItem Header="Neues Element">
+                                <MenuItem x:Name="ShapeMenu" Header="Shape">
 
-                            <MenuItem x:Name="ShapeMenu" Header="Shape">
+                                    <MenuItem Click="AddRectangle_Click" Header="Rechteck" />
 
-                                <MenuItem Click="AddRectangle_Click" Header="Rechteck" />
+                                    <MenuItem Click="AddRoundedRectangle_Click" Header="Abgerundetes Rechteck" />
 
-                                <MenuItem Click="AddRoundedRectangle_Click" Header="Abgerundetes Rechteck" />
+                                    <MenuItem Click="AddEllipse_Click" Header="Ellipse" />
 
-                                <MenuItem Click="AddEllipse_Click" Header="Ellipse" />
+                                    <MenuItem Click="AddDiamond_Click" Header="Raute" />
 
-                                <MenuItem Click="AddDiamond_Click" Header="Raute" />
+                                </MenuItem>
+
+                                <MenuItem Click="AddText_Click" Header="Text" />
+
+                                <MenuItem Click="AddArrow_Click" Header="Pfeil" />
+
+                                <Separator />
+
+                                <MenuItem Click="AddSymbol_Click" Header="Symbol" />
 
                             </MenuItem>
 
-                            <MenuItem Click="AddText_Click" Header="Text" />
+                            <Separator />
 
-                            <MenuItem Click="AddArrow_Click" Header="Pfeil" />
+                            <MenuItem Header="Board">
+
+                                <MenuItem Click="ClearBoard_Click" Header="Board leeren" />
+
+                                <MenuItem Click="ResetBoard_Click" Header="Board zurücksetzen" />
+
+                            </MenuItem>
 
                             <Separator />
 
-                            <MenuItem Click="AddSymbol_Click" Header="Symbol" />
-                        </MenuItem>
+                            <MenuItem Click="CloseContextMenu_Click" Header="Abbrechen" />
 
-                        <Separator />
+                        </ContextMenu>
 
+                    </Canvas.ContextMenu>
 
-                        <MenuItem Header="Board">
+                </Canvas>
 
-                            <MenuItem Click="ClearBoard_Click" Header="Board leeren" />
-
-                            <MenuItem Click="ResetBoard_Click" Header="Board zurücksetzen" />
-
-                        </MenuItem>
-
-
-                        <Separator />
-
-
-                        <MenuItem Click="CloseContextMenu_Click" Header="Abbrechen" />
-
-                    </ContextMenu>
-
-                </Canvas.ContextMenu>
-
-            </Canvas>
+            </ScrollViewer>
 
         </Border>
 

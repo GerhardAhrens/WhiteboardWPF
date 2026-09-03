@@ -86,6 +86,12 @@
         private readonly List<Grid> _selectedSymbols = new();
         private readonly Dictionary<Grid, Point> _multiDragStartSymbolPositions = new();
 
+        // ============================================================
+        // Kopieren
+        // ============================================================
+        private const double DuplicateOffset = 20;
+        private readonly Dictionary<Guid, Guid> _duplicateIdMap = new();
+
         public MainWindow()
         {
             this.InitializeComponent();
@@ -93,6 +99,38 @@
             StatusText.Text = "Whiteboard bereit";
         }
 
+        private void UpdateBoardSize()
+        {
+            double maxRight = 0;
+            double maxBottom = 0;
+
+            foreach (FrameworkElement element in WhiteBoardCanvas.Children.OfType<FrameworkElement>())
+            {
+                double left = Canvas.GetLeft(element);
+                double top = Canvas.GetTop(element);
+
+                if (double.IsNaN(left))
+                    left = 0;
+
+                if (double.IsNaN(top))
+                    top = 0;
+
+                double width = element.Width;
+                double height = element.Height;
+
+                if (double.IsNaN(width))
+                    width = element.ActualWidth;
+
+                if (double.IsNaN(height))
+                    height = element.ActualHeight;
+
+                maxRight = Math.Max(maxRight, left + width);
+                maxBottom = Math.Max(maxBottom, top + height);
+            }
+
+            WhiteBoardCanvas.Width = Math.Max(800, maxRight + 50);
+            WhiteBoardCanvas.Height = Math.Max(600, maxBottom + 50);
+        }
 
         // ============================================================
         // Whiteboard - rechte Maustaste
@@ -179,8 +217,7 @@
             // Trennlinie
             // ========================================================
 
-            contextMenu.Items.Add(
-                new Separator());
+            contextMenu.Items.Add(new Separator());
 
 
             // ========================================================
@@ -360,8 +397,7 @@
 
             _editingTextBox = textBox;
 
-            _textBeforeEditing =
-                model.Text;
+            _textBeforeEditing = model.Text;
 
 
             textBox.IsReadOnly = false;
@@ -371,8 +407,7 @@
             textBox.SelectAll();
 
 
-            StatusText.Text =
-                "Text bearbeiten";
+            StatusText.Text = "Text bearbeiten";
         }
 
         /// <summary>
@@ -464,8 +499,7 @@
                 return;
 
 
-            model.Text =
-                textBox.Text;
+            model.Text = textBox.Text;
 
 
             textBox.IsReadOnly = true;
@@ -493,11 +527,9 @@
                 return;
 
 
-            textBox.Text =
-                _textBeforeEditing;
+            textBox.Text = _textBeforeEditing;
 
-            model.Text =
-                _textBeforeEditing;
+            model.Text = _textBeforeEditing;
 
 
             textBox.IsReadOnly = true;
@@ -700,8 +732,7 @@
 
             if (sourceShape == targetShape)
             {
-                StatusText.Text =
-                    "Quelle und Ziel müssen unterschiedlich sein.";
+                StatusText.Text = "Quelle und Ziel müssen unterschiedlich sein.";
 
                 return;
             }
@@ -755,8 +786,7 @@
                 FindShape(arrow.TargetId);
 
 
-            if (sourceShape == null ||
-                targetShape == null)
+            if (sourceShape == null || targetShape == null)
             {
                 return;
             }
@@ -765,8 +795,7 @@
             Point start = GetConnectionPoint(sourceShape, targetShape);
             Point end = GetConnectionPoint(targetShape, sourceShape);
 
-            var path =
-                new System.Windows.Shapes.Path
+            var path = new System.Windows.Shapes.Path
                 {
                     Stroke =
                         Brushes.DimGray,
@@ -785,31 +814,22 @@
                 };
 
 
-            CreateArrowGeometry(
-                path,
-                start,
-                end);
+            CreateArrowGeometry(path, start, end);
 
 
-            path.MouseLeftButtonDown +=
-                Arrow_MouseLeftButtonDown;
+            path.MouseLeftButtonDown += this.Arrow_MouseLeftButtonDown;
 
 
-            path.ContextMenu =
-                CreateArrowContextMenu();
+            path.ContextMenu = this.CreateArrowContextMenu();
 
 
-            path.ContextMenuOpening +=
-                Arrow_ContextMenuOpening;
+            path.ContextMenuOpening += this.Arrow_ContextMenuOpening;
 
 
-            Panel.SetZIndex(
-                path,
-                -1000);
+            Panel.SetZIndex(path, -1000);
 
 
-            WhiteBoardCanvas.Children.Add(
-                path);
+            WhiteBoardCanvas.Children.Add(path);
         }
 
         private void Arrow_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -818,7 +838,7 @@
                 return;
 
 
-            SelectArrow(arrow);
+            this.SelectArrow(arrow);
         }
 
         private Point GetConnectionPoint(Grid source, Grid target)
@@ -974,16 +994,6 @@
             return center +
                    direction * scale;
         }
-
-        /*
-        private Point GetRoundedRectangleConnectionPoint(Grid shape, Point center, Vector direction)
-        {
-            return GetRectangleConnectionPoint(
-                shape,
-                center,
-                direction);
-        }
-        */
 
         private Point GetTriangleConnectionPoint(ShapeElement shape, Point center, Vector direction)
         {
@@ -1471,25 +1481,11 @@
             // Einzelnes Shape
             // ========================================================
 
-            double newX =
-                _dragStartShapeX +
-                deltaX;
+            double newX = _dragStartShapeX + deltaX;
+            double newY = _dragStartShapeY + deltaY;
 
-
-            double newY =
-                _dragStartShapeY +
-                deltaY;
-
-
-            Canvas.SetLeft(
-                shape,
-                newX);
-
-
-            Canvas.SetTop(
-                shape,
-                newY);
-
+            Canvas.SetLeft(shape, newX);
+            Canvas.SetTop(shape, newY);
 
             if (shape.Tag is ShapeElement model)
             {
@@ -1499,10 +1495,9 @@
 
 
             UpdateArrows();
-
+            UpdateBoardSize();
 
             StatusText.Text = $"Shape: X={newX:0}, Y={newY:0}";
-
 
             e.Handled = true;
         }
@@ -1937,13 +1932,15 @@
 
             var control = CreateShapeControl(shape);
 
-            WhiteBoardCanvas.Children.Add(control);
+            this.WhiteBoardCanvas.Children.Add(control);
 
-            SelectShape(control);
+            this.SelectShape(control);
 
-            StatusText.Text =  $"{GetShapeName(shapeType)} erstellt";
+            this.StatusText.Text =  $"{GetShapeName(shapeType)} erstellt";
 
-            WhiteBoardContextMenu.IsOpen = false;
+            this.WhiteBoardContextMenu.IsOpen = false;
+
+            this.UpdateBoardSize();
         }
 
         private string GetShapeName(ShapeType shapeType)
@@ -2585,7 +2582,9 @@
 
         private List<ShapeElement> GetShapeModels()
         {
-            return WhiteBoardCanvas.Children.OfType<Grid>().Where(grid => grid.Tag is ShapeElement).Select(grid => (ShapeElement)grid.Tag).ToList();
+            return WhiteBoardCanvas.Children.OfType<Grid>()
+                .Where(grid => grid.Tag is ShapeElement)
+                .Select(grid => (ShapeElement)grid.Tag).ToList();
         }
 
         private void LoadBoard_Click(object sender, RoutedEventArgs e)
@@ -2758,17 +2757,10 @@
                 return;
 
 
-            _selectedShapes.Add(shape);
+            this._selectedShapes.Add(shape);
 
-
-            SetShapeSelectedVisual(
-                shape,
-                true);
-
-
-            SetResizeHandlesVisibility(
-                shape,
-                Visibility.Visible);
+            this.SetShapeSelectedVisual(shape, true);
+            this.SetResizeHandlesVisibility(shape, Visibility.Visible);
         }
 
         private void RemoveShapeFromSelection(Grid shape)
@@ -2820,9 +2812,7 @@
         {
             foreach (Grid shape in _selectedShapes.ToList())
             {
-                if (!_multiDragStartPositions.TryGetValue(
-                        shape,
-                        out Point start))
+                if (!_multiDragStartPositions.TryGetValue(shape, out Point start))
                 {
                     continue;
                 }
@@ -2841,9 +2831,9 @@
                 }
             }
 
-            UpdateArrows();
-
-            StatusText.Text = $"{_selectedShapes.Count} Shapes verschoben";
+            this.UpdateArrows();
+            this.UpdateBoardSize();
+            this.StatusText.Text = $"{_selectedShapes.Count} Shapes verschoben";
         }
 
         // ============================================================
@@ -2919,40 +2909,24 @@
             }
         }
 
-        private void MoveSelectedElements(
-            double deltaX,
-            double deltaY)
+        private void MoveSelectedElements(double deltaX, double deltaY)
         {
             // ========================================================
             // Shapes
             // ========================================================
 
-            foreach (Grid shape in
-                     _selectedShapes.ToList())
+            foreach (Grid shape in _selectedShapes.ToList())
             {
-                if (!_multiDragStartPositions.TryGetValue(
-                        shape,
-                        out Point start))
+                if (!_multiDragStartPositions.TryGetValue(shape, out Point start))
                 {
                     continue;
                 }
 
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
 
-                double newX =
-                    start.X + deltaX;
-
-                double newY =
-                    start.Y + deltaY;
-
-
-                Canvas.SetLeft(
-                    shape,
-                    newX);
-
-                Canvas.SetTop(
-                    shape,
-                    newY);
-
+                Canvas.SetLeft(shape, newX);
+                Canvas.SetTop(shape, newY);
 
                 if (shape.Tag is ShapeElement model)
                 {
@@ -2966,32 +2940,19 @@
             // Text-Elemente
             // ========================================================
 
-            foreach (Grid textControl in
-                     _selectedTextElements.ToList())
+            foreach (Grid textControl in _selectedTextElements.ToList())
             {
-                if (!_multiDragStartTextPositions.TryGetValue(
-                        textControl,
-                        out Point start))
+                if (!_multiDragStartTextPositions.TryGetValue(textControl, out Point start))
                 {
                     continue;
                 }
 
 
-                double newX =
-                    start.X + deltaX;
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
 
-                double newY =
-                    start.Y + deltaY;
-
-
-                Canvas.SetLeft(
-                    textControl,
-                    newX);
-
-                Canvas.SetTop(
-                    textControl,
-                    newY);
-
+                Canvas.SetLeft(textControl, newX);
+                Canvas.SetTop(textControl, newY);
 
                 if (textControl.Tag is TextElement model)
                 {
@@ -3005,32 +2966,18 @@
             // Symbole
             // ========================================================
 
-            foreach (Grid symbolControl in
-                     _selectedSymbols.ToList())
+            foreach (Grid symbolControl in _selectedSymbols.ToList())
             {
-                if (!_multiDragStartSymbolPositions.TryGetValue(
-                        symbolControl,
-                        out Point start))
+                if (!_multiDragStartSymbolPositions.TryGetValue(symbolControl, out Point start))
                 {
                     continue;
                 }
 
+                double newX = start.X + deltaX;
+                double newY = start.Y + deltaY;
 
-                double newX =
-                    start.X + deltaX;
-
-                double newY =
-                    start.Y + deltaY;
-
-
-                Canvas.SetLeft(
-                    symbolControl,
-                    newX);
-
-                Canvas.SetTop(
-                    symbolControl,
-                    newY);
-
+                Canvas.SetLeft(symbolControl, newX);
+                Canvas.SetTop(symbolControl, newY);
 
                 if (symbolControl.Tag is SymbolElement symbol)
                 {
@@ -3044,10 +2991,10 @@
             // Pfeile aktualisieren
             // ========================================================
 
-            UpdateArrows();
+            this.UpdateArrows();
+            this.UpdateBoardSize();
 
-
-            StatusText.Text = $"{_selectedShapes.Count} Shapes, {_selectedTextElements.Count} Texte und {_selectedSymbols.Count} Symbole verschoben";
+            this.StatusText.Text = $"{_selectedShapes.Count} Shapes, {_selectedTextElements.Count} Texte und {_selectedSymbols.Count} Symbole verschoben";
         }
 
         private void AddShapeFromMenu_Click(object sender, RoutedEventArgs e)
@@ -3166,11 +3113,10 @@
 
             var control = CreateTextControl(text);
 
-            WhiteBoardCanvas.Children.Add(control);
-
-            WhiteBoardContextMenu.IsOpen = false;
-
-            StatusText.Text = "Text erstellt";
+            this.WhiteBoardCanvas.Children.Add(control);
+            this.WhiteBoardContextMenu.IsOpen = false;
+            this.UpdateBoardSize();
+            this.StatusText.Text = "Text erstellt";
         }
 
         private Grid CreateTextControl(TextElement text)
@@ -3398,23 +3344,19 @@
             // Strg -> Mehrfachauswahl
             // ========================================================
 
-            if ((Keyboard.Modifiers &
-                 ModifierKeys.Control) ==
-                ModifierKeys.Control)
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 if (IsTextSelected(grid))
                 {
                     RemoveTextFromSelection(grid);
 
-                    _selectedTextElement =
-                        _selectedTextElements.LastOrDefault();
+                    _selectedTextElement = _selectedTextElements.LastOrDefault();
                 }
                 else
                 {
                     AddTextToSelection(grid);
 
-                    _selectedTextElement =
-                        grid;
+                    _selectedTextElement = grid;
                 }
 
                 e.Handled = true;
@@ -3529,25 +3471,12 @@
 
             if (_selectedTextElements.Count > 1)
             {
-                Point currentPosition =
-                    e.GetPosition(
-                        WhiteBoardCanvas);
+                Point currentPosition = e.GetPosition(WhiteBoardCanvas);
 
+                double deltaX = currentPosition.X - _textDragStartMousePosition.X;
+                double deltaY = currentPosition.Y - _textDragStartMousePosition.Y;
 
-                double deltaX =
-                    currentPosition.X -
-                    _textDragStartMousePosition.X;
-
-
-                double deltaY =
-                    currentPosition.Y -
-                    _textDragStartMousePosition.Y;
-
-
-                MoveSelectedElements(
-                    deltaX,
-                    deltaY);
-
+                MoveSelectedElements(deltaX, deltaY);
 
                 e.Handled = true;
 
@@ -3559,50 +3488,23 @@
             // Einzelnes Text-Element verschieben
             // ========================================================
 
-            Point singleCurrentPosition =
-                e.GetPosition(
-                    WhiteBoardCanvas);
+            Point singleCurrentPosition = e.GetPosition(WhiteBoardCanvas);
 
 
-            double singleDeltaX =
-                singleCurrentPosition.X -
-                _textDragStartMousePosition.X;
+            double singleDeltaX = singleCurrentPosition.X - _textDragStartMousePosition.X;
+            double singleDeltaY = singleCurrentPosition.Y - _textDragStartMousePosition.Y;
 
+            double newX = _textDragStartX + singleDeltaX;
+            double newY = _textDragStartY + singleDeltaY;
 
-            double singleDeltaY =
-                singleCurrentPosition.Y -
-                _textDragStartMousePosition.Y;
+            Canvas.SetLeft(grid, newX);
+            Canvas.SetTop(grid, newY);
 
+            text.X = newX;
+            text.Y = newY;
 
-            double newX =
-                _textDragStartX +
-                singleDeltaX;
-
-
-            double newY =
-                _textDragStartY +
-                singleDeltaY;
-
-
-            Canvas.SetLeft(
-                grid,
-                newX);
-
-            Canvas.SetTop(
-                grid,
-                newY);
-
-
-            text.X =
-                newX;
-
-            text.Y =
-                newY;
-
-
-            StatusText.Text =
-                $"Text: X={newX:0}, Y={newY:0}";
-
+            this.StatusText.Text = $"Text: X={newX:0}, Y={newY:0}";
+            this.UpdateBoardSize();
 
             e.Handled = true;
         }
@@ -3770,6 +3672,21 @@
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) ==  ModifierKeys.Control)
             {
                 this.SelectAllElements();
+
+                e.Handled = true;
+
+                return;
+            }
+
+            if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                this.DuplicateSelectedElements();
+                /*
+                this.DuplicateSelectedShapes();
+                this.DuplicateSelectedTextElements();
+                this.DuplicateSelectedSymbols();
+                this.DuplicateSelectedArrows();
+                */
 
                 e.Handled = true;
 
@@ -4435,20 +4352,15 @@
 
             _symbols.Add(symbol);
 
-
             var control = CreateSymbolControl(symbol);
 
-            WhiteBoardCanvas.Children.Add(control);
-
-
-            StatusText.Text = "Symbol erstellt";
-
-            WhiteBoardContextMenu.IsOpen = false;
+            this.WhiteBoardCanvas.Children.Add(control);
+            this.StatusText.Text = "Symbol erstellt";
+            this.UpdateBoardSize();
+            this.WhiteBoardContextMenu.IsOpen = false;
         }
 
-        private void Symbol_PreviewMouseLeftButtonDown(
-            object sender,
-            MouseButtonEventArgs e)
+        private void Symbol_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not Grid grid)
                 return;
@@ -4462,8 +4374,7 @@
             // Resize-Griff
             // ========================================================
 
-            if (IsResizeThumbSource(
-                    e.OriginalSource as DependencyObject))
+            if (IsResizeThumbSource(e.OriginalSource as DependencyObject))
             {
                 return;
             }
@@ -4473,8 +4384,7 @@
             // Doppelklick / normales Symbol
             // ========================================================
 
-            if ((Keyboard.Modifiers & ModifierKeys.Control) ==
-                ModifierKeys.Control)
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 // ====================================================
                 // Strg + Klick
@@ -4484,15 +4394,13 @@
                 {
                     RemoveSymbolFromSelection(grid);
 
-                    _selectedSymbol =
-                        _selectedSymbols.LastOrDefault();
+                    _selectedSymbol = _selectedSymbols.LastOrDefault();
                 }
                 else
                 {
                     AddSymbolToSelection(grid);
 
-                    _selectedSymbol =
-                        grid;
+                    _selectedSymbol = grid;
                 }
             }
             else
@@ -4501,28 +4409,23 @@
                 // Normaler Klick
                 // ====================================================
 
-                bool keepMultipleSelection =
-                    IsSymbolSelected(grid) &&
+                bool keepMultipleSelection = IsSymbolSelected(grid) &&
                     (
-                        _selectedSymbols.Count > 1 ||
-                        _selectedShapes.Count > 0 ||
-                        _selectedTextElements.Count > 0
+                        _selectedSymbols.Count > 1 || _selectedShapes.Count > 0 || _selectedTextElements.Count > 0
                     );
 
 
                 if (keepMultipleSelection)
                 {
-                    _selectedSymbol =
-                        grid;
+                    _selectedSymbol = grid;
                 }
                 else
                 {
-                    ClearAllSelections();
+                    this.ClearAllSelections();
 
-                    AddSymbolToSelection(grid);
+                    this.AddSymbolToSelection(grid);
 
-                    _selectedSymbol =
-                        grid;
+                    this._selectedSymbol = grid;
                 }
             }
 
@@ -4567,9 +4470,7 @@
         }
 
 
-        private void Symbol_PreviewMouseMove(
-            object sender,
-            MouseEventArgs e)
+        private void Symbol_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (!_isDraggingSymbol)
                 return;
@@ -4583,20 +4484,10 @@
                 return;
 
 
-            Point currentPosition =
-                e.GetPosition(
-                    WhiteBoardCanvas);
+            Point currentPosition = e.GetPosition(WhiteBoardCanvas);
 
-
-            double deltaX =
-                currentPosition.X -
-                _symbolDragStartMousePosition.X;
-
-
-            double deltaY =
-                currentPosition.Y -
-                _symbolDragStartMousePosition.Y;
-
+            double deltaX = currentPosition.X - _symbolDragStartMousePosition.X;
+            double deltaY = currentPosition.Y - _symbolDragStartMousePosition.Y;
 
             // ========================================================
             // Mehrfachauswahl
@@ -4608,9 +4499,7 @@
                 (_selectedSymbols.Count > 0 &&
                  _selectedTextElements.Count > 0))
             {
-                MoveSelectedElements(
-                    deltaX,
-                    deltaY);
+                MoveSelectedElements(deltaX,  deltaY);
 
                 e.Handled = true;
 
@@ -4622,35 +4511,17 @@
             // Einzelnes Symbol
             // ========================================================
 
-            double newX =
-                _symbolDragStartX +
-                deltaX;
+            double newX = _symbolDragStartX + deltaX;
+            double newY = _symbolDragStartY + deltaY;
 
+            Canvas.SetLeft( grid, newX);
+            Canvas.SetTop(grid, newY);
 
-            double newY =
-                _symbolDragStartY +
-                deltaY;
+            symbol.X = newX;
+            symbol.Y = newY;
 
-
-            Canvas.SetLeft(
-                grid,
-                newX);
-
-            Canvas.SetTop(
-                grid,
-                newY);
-
-
-            symbol.X =
-                newX;
-
-            symbol.Y =
-                newY;
-
-
-            StatusText.Text =
-                $"Symbol: X={newX:0}, Y={newY:0}";
-
+            StatusText.Text = $"Symbol: X={newX:0}, Y={newY:0}";
+            UpdateBoardSize();
 
             e.Handled = true;
         }
@@ -4750,16 +4621,256 @@
             return _selectedSymbols.Contains(symbol);
         }
 
-        private void DeleteSelectedSymbols()
+        // ============================================================
+        // Kopieren
+        // ============================================================
+        private void DuplicateSelectedElements()
         {
-            foreach (Grid symbolControl in _selectedSymbols.ToList())
+            if (_selectedShapes.Count == 0 && _selectedTextElements.Count == 0 && _selectedSymbols.Count == 0)
             {
-                DeleteSymbol(symbolControl);
+                StatusText.Text = "Keine Elemente ausgewählt";
+                return;
             }
 
-            _selectedSymbols.Clear();
+            // Shapes duplizieren
+            List<Grid> shapeDuplicates = DuplicateSelectedShapes();
 
-            _selectedSymbol = null;
+            // Texte duplizieren
+            List<Grid> textDuplicates = DuplicateSelectedTextElements();
+
+            // Symbole duplizieren
+            List<Grid> symbolDuplicates = DuplicateSelectedSymbols();
+
+            // Pfeile zwischen duplizierten Shapes duplizieren
+            DuplicateSelectedArrows();
+
+            // Neue Elemente auswählen
+            SelectDuplicatedElements(shapeDuplicates, textDuplicates, symbolDuplicates);
+
+            StatusText.Text = $"{shapeDuplicates.Count} Shapes, {textDuplicates.Count} Texte und {symbolDuplicates.Count} Symbole dupliziert";
+        }
+
+
+        private Grid? DuplicateShape(Grid source)
+        {
+            if (source.Tag is not ShapeElement original)
+                return null;
+
+
+            // ========================================================
+            // Kopie des Datenmodells erzeugen
+            // ========================================================
+
+            var duplicate = new ShapeElement
+            {
+                Id = Guid.CreateVersion7(),
+
+                ShapeType = original.ShapeType,
+
+                X = original.X + DuplicateOffset,
+                Y = original.Y + DuplicateOffset,
+
+                Width = original.Width,
+                Height = original.Height,
+
+                Text = original.Text,
+
+                BackgroundColor = original.BackgroundColor
+            };
+
+
+            // ========================================================
+            // Control erzeugen
+            // ========================================================
+
+            var control = CreateShapeControl(duplicate);
+
+
+            WhiteBoardCanvas.Children.Add(control);
+
+
+            return control;
+        }
+
+        private List<Grid> DuplicateSelectedShapes()
+        {
+            var duplicates = new List<Grid>();
+
+
+            _duplicateIdMap.Clear();
+
+
+            foreach (Grid source in this._selectedShapes.ToList())
+            {
+                if (source.Tag is not ShapeElement original)
+                {
+                    continue;
+                }
+
+
+                Grid? duplicate = this.DuplicateShape(source);
+
+                if (duplicate == null)
+                {
+                    continue;
+                }
+
+                if (duplicate.Tag is ShapeElement copy)
+                {
+                    _duplicateIdMap[original.Id] = copy.Id;
+                }
+
+                duplicates.Add(duplicate);
+            }
+
+            return duplicates;
+        }
+
+        private Grid? DuplicateTextElement(Grid source)
+        {
+            if (source.Tag is not TextElement original)
+            {
+                return null;
+            }
+
+            var duplicate = new TextElement
+            {
+                Id = Guid.CreateVersion7(),
+                X = original.X + DuplicateOffset,
+                Y = original.Y + DuplicateOffset,
+                Width = original.Width,
+                Height = original.Height,
+                Text = original.Text,
+                FontSize = original.FontSize
+            };
+
+            var control = CreateTextControl(duplicate);
+
+            WhiteBoardCanvas.Children.Add(control);
+
+            return control;
+        }
+
+        private List<Grid> DuplicateSelectedTextElements()
+        {
+            var duplicates = new List<Grid>();
+
+            foreach (Grid source in _selectedTextElements.ToList())
+            {
+                Grid? duplicate = DuplicateTextElement(source);
+
+                if (duplicate != null)
+                {
+                    duplicates.Add(duplicate);
+                }
+            }
+
+            return duplicates;
+        }
+
+        private Grid? DuplicateSymbol(Grid source)
+        {
+            if (source.Tag is not SymbolElement original)
+            {
+                return null;
+            }
+
+            var duplicate = new SymbolElement
+            {
+                Id = Guid.CreateVersion7(),
+                X = original.X + DuplicateOffset,
+                Y = original.Y + DuplicateOffset,
+                Width = original.Width,
+                Height = original.Height,
+                SymbolType = original.SymbolType
+            };
+
+            var control = this.CreateSymbolControl(duplicate);
+
+            WhiteBoardCanvas.Children.Add(control);
+
+            return control;
+        }
+
+        private List<Grid> DuplicateSelectedSymbols()
+        {
+            var duplicates = new List<Grid>();
+
+            foreach (Grid source in _selectedSymbols.ToList())
+            {
+                Grid? duplicate = DuplicateSymbol(source);
+
+                if (duplicate != null)
+                    duplicates.Add(duplicate);
+            }
+
+            return duplicates;
+        }
+
+        private void SelectDuplicatedElements(List<Grid> shapeDuplicates, List<Grid> textDuplicates, List<Grid> symbolDuplicates)
+        {
+            this.ClearAllSelections();
+
+            foreach (Grid shape in shapeDuplicates)
+            {
+                this.AddShapeToSelection(shape);
+            }
+
+            foreach (Grid text in textDuplicates)
+            {
+                this.AddTextToSelection(text);
+            }
+
+            foreach (Grid symbol in symbolDuplicates)
+            {
+                this.AddSymbolToSelection(symbol);
+            }
+
+            this._selectedShape = this._selectedShapes.LastOrDefault();
+            this._selectedTextElement = this._selectedTextElements.LastOrDefault();
+            this._selectedSymbol = this._selectedSymbols.LastOrDefault();
+        }
+
+        private ArrowElement? DuplicateArrow(ArrowElement original)
+        {
+            if (!_duplicateIdMap.TryGetValue(original.SourceId, out Guid newSourceId))
+            {
+                return null;
+            }
+
+            if (!_duplicateIdMap.TryGetValue(original.TargetId, out Guid newTargetId))
+            {
+                return null;
+            }
+
+            return new ArrowElement
+            {
+                Id = Guid.CreateVersion7(),
+                SourceId = newSourceId,
+                TargetId = newTargetId
+            };
+        }
+
+        private List<ArrowElement> DuplicateSelectedArrows()
+        {
+            var duplicates = new List<ArrowElement>();
+
+            foreach (ArrowElement original in this._arrows.ToList())
+            {
+                ArrowElement? duplicate = this.DuplicateArrow(original);
+
+                if (duplicate == null)
+                {
+                    continue;
+                }
+
+                this._arrows.Add(duplicate);
+                this.DrawArrow(duplicate);
+
+                duplicates.Add(duplicate);
+            }
+
+            return duplicates;
         }
 
         // ============================================================
