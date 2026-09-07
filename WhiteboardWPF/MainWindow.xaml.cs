@@ -15,6 +15,7 @@
     using WhiteboardWPF.Board;
     using WhiteboardWPF.ElementLibrary;
     using WhiteboardWPF.Models;
+    using WhiteboardWPF.Selection;
     using WhiteboardWPF.ShapeProvider;
 
     /// <summary>
@@ -28,10 +29,14 @@
         private readonly BoardSizeManager _boardSizeManager = new();
 
         // ============================================================
+        // Selektion
+        // ============================================================
+        private readonly SelectionManager _selectionManager = new();
+
+        // ============================================================
         // Verschieben von Shapes und Text-Elemente
         // ============================================================
         private Point _contextMenuPosition;
-        private Grid? _selectedShape;
         private bool _isDragging;
         private Point _dragStartMousePosition;
         private double _dragStartShapeX;
@@ -42,7 +47,6 @@
         // Text-Elemente
         // ============================================================
         private readonly List<TextElement> _textElements = new();
-        private Grid? _selectedTextElement;
         private bool _isDraggingText;
         private Point _textDragStartMousePosition;
         private double _textDragStartX;
@@ -73,15 +77,11 @@
         private readonly List<ArrowElement> _arrows = new();
         private bool _isCreatingArrow;
         private Grid? _arrowSourceShape;
-        private System.Windows.Shapes.Path? _selectedArrow;
-        private readonly List<System.Windows.Shapes.Path> _selectedArrows = new();
 
         // ============================================================
         // Mehrfachmarkierung
         // ============================================================
-        private readonly List<Grid> _selectedShapes = new();
         private readonly Dictionary<Grid, Point> _multiDragStartPositions = new();
-        private readonly List<Grid> _selectedTextElements = new();
 
         // ============================================================
         // Symbole
@@ -91,8 +91,6 @@
         private Point _symbolDragStartMousePosition;
         private double _symbolDragStartX;
         private double _symbolDragStartY;
-        private Grid? _selectedSymbol;
-        private readonly List<Grid> _selectedSymbols = new();
         private readonly Dictionary<Grid, Point> _multiDragStartSymbolPositions = new();
 
         // ============================================================
@@ -115,6 +113,39 @@
             StatusText.Text = "Whiteboard bereit";
         }
 
+        #region Properies
+        private Grid? _selectedShape
+        {
+            get => _selectionManager.SelectedShape;
+            set => _selectionManager.SelectedShape = value;
+        }
+
+        private List<Grid> _selectedShapes => _selectionManager.SelectedShapes;
+
+        private Grid? _selectedTextElement
+        {
+            get => _selectionManager.SelectedTextElement;
+            set => _selectionManager.SelectedTextElement = value;
+        }
+
+        private List<Grid> _selectedTextElements => _selectionManager.SelectedTextElements;
+
+        private Grid? _selectedSymbol
+        {
+            get => _selectionManager.SelectedSymbol;
+            set => _selectionManager.SelectedSymbol = value;
+        }
+
+        private List<Grid> _selectedSymbols => _selectionManager.SelectedSymbols;
+
+        private System.Windows.Shapes.Path? _selectedArrow
+        {
+            get => _selectionManager.SelectedArrow;
+            set => _selectionManager.SelectedArrow = value;
+        }
+
+        private List<System.Windows.Shapes.Path> _selectedArrows => _selectionManager.SelectedArrows;
+        #endregion Properties
         #region Shapes und Symbole Bibliothek
         private void InitializeElementLibrary()
         {

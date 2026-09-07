@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Selection\" />
     <Folder Include="Resources\Style\" />
   </ItemGroup>
 
