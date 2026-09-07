@@ -166,7 +166,7 @@
                 <Canvas
                     x:Name="WhiteBoardCanvas"
                     Width="800"
-                    Height="600"
+                    Height="500"
                     Background="{StaticResource BoardBackgroundBrush}"
                     MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown"
                     MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown">
@@ -177,17 +177,7 @@
 
                             <MenuItem Header="Neues Element">
 
-                                <MenuItem x:Name="ShapeMenu" Header="Shape">
-
-                                    <MenuItem Click="AddRectangle_Click" Header="Rechteck" />
-
-                                    <MenuItem Click="AddRoundedRectangle_Click" Header="Abgerundetes Rechteck" />
-
-                                    <MenuItem Click="AddEllipse_Click" Header="Ellipse" />
-
-                                    <MenuItem Click="AddDiamond_Click" Header="Raute" />
-
-                                </MenuItem>
+                                <MenuItem x:Name="ShapeMenu" Header="Shape" />
 
                                 <MenuItem Click="AddText_Click" Header="Text" />
 
@@ -195,10 +185,9 @@
 
                                 <Separator />
 
-                                <MenuItem Click="AddSymbol_Click" Header="Symbol" />
+                                <MenuItem x:Name="SymbolMenu" Header="Symbol" />
 
                             </MenuItem>
-
                             <Separator />
 
                             <MenuItem Header="Board">

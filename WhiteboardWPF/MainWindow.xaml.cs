@@ -1,5 +1,6 @@
 ﻿namespace WhiteboardWPF
 {
+    using System.Globalization;
     using System.IO;
     using System.Text.Json;
     using System.Windows;
@@ -103,6 +104,7 @@
             this.InitializeComponent();
             this.InitializeElementLibrary();
             this.InitializeShapeMenu();
+            this.InitializeSymbolMenu();
             StatusText.Text = "Whiteboard bereit";
         }
 
@@ -158,6 +160,42 @@
                         ShapeType = ShapeType.Triangle
                     },
                     ShapeType.Triangle));
+
+            _elementLibrary.Register(
+                   new ElementLibraryItem(
+                       "Info",
+                       "Symbol",
+                       () => new SymbolElement
+                       {
+                           SymbolType = "Info"
+                       }));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Warnung",
+                    "Symbol",
+                    () => new SymbolElement
+                    {
+                        SymbolType = "Warning"
+                    }));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Frage",
+                    "Symbol",
+                    () => new SymbolElement
+                    {
+                        SymbolType = "Question"
+                    }));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Gleich =",
+                    "Symbol",
+                    () => new SymbolElement
+                    {
+                        SymbolType = "Equals"
+                    }));
         }
 
         private ShapeElement CreateShapeFromLibrary(ShapeType shapeType)
@@ -174,6 +212,71 @@
                 throw new InvalidOperationException($"Der Bibliothekseintrag '{item.Name}' erzeugt kein ShapeElement.");
 
             return shape;
+        }
+
+        private SymbolElement CreateSymbolFromLibrary(string symbolType)
+        {
+            foreach (ElementLibraryItem item in _elementLibrary.Items)
+            {
+                if (item.Category != "Symbol")
+                    continue;
+
+                if (item.CreateModel() is not SymbolElement symbol)
+                    continue;
+
+                if (symbol.SymbolType == symbolType)
+                    return symbol;
+            }
+
+            throw new InvalidOperationException($"Symbol '{symbolType}' ist nicht in der Elementbibliothek registriert.");
+        }
+
+        private void InitializeSymbolMenu()
+        {
+            SymbolMenu.Items.Clear();
+
+            foreach (ElementLibraryItem item in _elementLibrary.Items
+                         .Where(item => item.Category == "Symbol"))
+            {
+                var menuItem = new MenuItem
+                {
+                    Header = item.Name,
+                    Tag = item
+                };
+
+                menuItem.Click += LibrarySymbolMenuItem_Click;
+
+                SymbolMenu.Items.Add(menuItem);
+            }
+        }
+
+        private void LibrarySymbolMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+            if (menuItem.Tag is not ElementLibraryItem item)
+                return;
+
+            if (item.CreateModel() is not SymbolElement symbol)
+                return;
+
+            AddSymbol(symbol.SymbolType);
+
+            e.Handled = true;
+        }
+
+        private DrawingImage CreateSymbolImage(string symbolType)
+        {
+            return symbolType switch
+            {
+                "Info" => CreateInfoSymbol(),
+                "Warning" => CreateWarningSymbol(),
+                "Question" => CreateQuestionSymbol(),
+                "Equals" => CreateEqualsSymbol(),
+
+                _ => CreateInfoSymbol()
+            };
         }
         #endregion Shapes und Symbole Bibliothek
 
@@ -207,7 +310,7 @@
             }
 
             WhiteBoardCanvas.Width = Math.Max(800, maxRight + 50);
-            WhiteBoardCanvas.Height = Math.Max(600, maxBottom + 50);
+            WhiteBoardCanvas.Height = Math.Max(500, maxBottom + 50);
         }
 
         // ============================================================
@@ -1958,6 +2061,7 @@
             }
         }
 
+        /*
         private void AddRectangle_Click(object sender, RoutedEventArgs e)
         {
             AddShape(ShapeType.Rectangle);
@@ -1980,10 +2084,14 @@
         {
             AddShape(ShapeType.Diamond);
         }
+        */
 
         private void AddShape(ShapeType shapeType)
         {
             ShapeElement shape = this.CreateShapeFromLibrary(shapeType);
+
+            shape.X = _contextMenuPosition.X;
+            shape.Y = _contextMenuPosition.Y;
 
             var control = CreateShapeControl(shape);
 
@@ -1991,7 +2099,7 @@
 
             this.SelectShape(control);
 
-            this.StatusText.Text =  $"{GetShapeName(shapeType)} erstellt";
+            this.StatusText.Text = $"{GetShapeName(shapeType)} erstellt";
 
             this.WhiteBoardContextMenu.IsOpen = false;
 
@@ -2891,17 +2999,38 @@
         // ============================================================
         private void InitializeShapeMenu()
         {
-            this.ShapeMenu.Items.Clear();
+            ShapeMenu.Items.Clear();
 
-
-            foreach (ShapeDefinition definition in ShapeDefinitionProvider.Definitions)
+            foreach (ElementLibraryItem item in _elementLibrary.Items
+                         .Where(item =>
+                             item.Category == "Shape" &&
+                             item.ShapeType.HasValue))
             {
-                var item = new MenuItem {Header = definition.Name, Tag = definition.Type };
+#pragma warning disable CS8629 // Ein Werttyp, der NULL zulässt, kann NULL sein.
+                var menuItem = new MenuItem
+                {
+                    Header = item.Name,
+                    Tag = item.ShapeType.Value
+                };
+#pragma warning restore CS8629 // Ein Werttyp, der NULL zulässt, kann NULL sein.
 
-                item.Click += AddShapeFromMenu_Click;
+                menuItem.Click += LibraryShapeMenuItem_Click;
 
-                this.ShapeMenu.Items.Add(item);
+                ShapeMenu.Items.Add(menuItem);
             }
+        }
+
+        private void LibraryShapeMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem)
+                return;
+
+            if (menuItem.Tag is not ShapeType shapeType)
+                return;
+
+            AddShape(shapeType);
+
+            e.Handled = true;
         }
 
         private void StartMultiElementDrag()
@@ -4123,67 +4252,91 @@
         // ============================================================
         private DrawingImage CreateInfoSymbol()
         {
-            var drawingGroup =
-                new DrawingGroup();
+            var drawingGroup = new DrawingGroup();
 
 
-            using (DrawingContext dc =
-                   drawingGroup.Open())
+            using (DrawingContext dc = drawingGroup.Open())
             {
                 // ====================================================
                 // Kreis
                 // ====================================================
 
-                var pen =
-                    new Pen(
-                        Brushes.DimGray,
-                        3);
+                var pen = new Pen(Brushes.DimGray, 3);
 
-                var brush =
-                    Brushes.DodgerBlue;
+                var brush = Brushes.DodgerBlue;
 
-
-                dc.DrawEllipse(
-                    brush,
-                    pen,
-                    new Point(40, 40),
-                    36,
-                    36);
+                dc.DrawEllipse(brush, pen, new Point(40, 40), 36, 36);
 
 
                 // ====================================================
                 // "i"
                 // ====================================================
 
-                var typeface =
-                    new Typeface(
-                        new FontFamily("Segoe UI"),
-                        FontStyles.Normal,
-                        FontWeights.Bold,
-                        FontStretches.Normal);
+                var typeface = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
+                var text = new FormattedText("i", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 42, Brushes.White, 1.0);
 
-                var text =
-                    new FormattedText(
-                        "i",
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        42,
-                        Brushes.White,
-                        1.0);
-
-
-                dc.DrawText(
-                    text,
-                    new Point(
-                        34,
-                        17));
+                dc.DrawText(text, new Point( 34, 10));
             }
 
 
-            return new DrawingImage(
-                drawingGroup);
+            return new DrawingImage(drawingGroup);
+        }
+
+        private DrawingImage CreateWarningSymbol()
+        {
+            var drawingGroup = new DrawingGroup();
+
+            var geometry = Geometry.Parse("M 40,5 L 75,70 L 5,70 Z");
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.Gold, new Pen(Brushes.Black, 2), geometry));
+
+            var textGeometry = new FormattedText("!", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 36, Brushes.Black, 1.0)
+                .BuildGeometry(new Point(35, 20));
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.Black, null, textGeometry));
+
+            return new DrawingImage(drawingGroup);
+        }
+
+        private DrawingImage CreateQuestionSymbol()
+        {
+            var drawingGroup = new DrawingGroup();
+
+            // Blauer Kreis
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 35, 35);
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
+
+            // Fragezeichen
+            var formattedText = new FormattedText("?", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, 
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 44, Brushes.White, 1.0);
+
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(40 - formattedText.Width / 2, 40 - formattedText.Height / 2));
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
+
+            return new DrawingImage(drawingGroup);
+        }
+
+        private DrawingImage CreateEqualsSymbol()
+        {
+            var drawingGroup = new DrawingGroup();
+
+            // Blauer Kreis
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 35, 35);
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
+
+            // Gleichheitszeichen
+            var formattedText = new FormattedText("=", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 44, Brushes.White, 1.0);
+
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(40 - formattedText.Width / 2, 40 - formattedText.Height / 2 - 2));
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
+
+            return new DrawingImage(drawingGroup);
         }
 
         private Grid CreateSymbolControl(SymbolElement symbol)
@@ -4200,14 +4353,11 @@
             // Symbol
             // ========================================================
 
-            var image =
-                new Image
+            var image = new Image
                 {
-                    Source =
-                        CreateInfoSymbol(),
+                    Source = CreateSymbolImage(symbol.SymbolType),
 
-                    Stretch =
-                        Stretch.Fill,
+                    Stretch = Stretch.Fill,
 
                     IsHitTestVisible = true
                 };
@@ -4237,56 +4387,19 @@
             // ========================================================
 
             AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Center,
-                VerticalAlignment.Top,
-                ResizeDirection.Top);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Top,
-                ResizeDirection.TopRight);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Left,
-                VerticalAlignment.Center,
-                ResizeDirection.Left);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Center,
-                ResizeDirection.Right);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Left,
-                VerticalAlignment.Bottom,
-                ResizeDirection.BottomLeft);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Center,
-                VerticalAlignment.Bottom,
-                ResizeDirection.Bottom);
-
-            AddResizeThumb(
-                grid,
-                HorizontalAlignment.Right,
-                VerticalAlignment.Bottom,
-                ResizeDirection.BottomRight);
-
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
+            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
+            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
+            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
 
             // ========================================================
             // Contextmenü
             // ========================================================
 
-            grid.ContextMenu =
-                CreateSymbolContextMenu();
-
+            grid.ContextMenu = CreateSymbolContextMenu();
 
             return grid;
         }
@@ -4294,7 +4407,6 @@
         private ContextMenu CreateSymbolContextMenu()
         {
             var contextMenu = new ContextMenu();
-
 
             var deleteItem = new MenuItem
                 {
@@ -4304,9 +4416,7 @@
 
             deleteItem.Click += SymbolDelete_Click;
 
-
             contextMenu.Items.Add(deleteItem);
-
 
             return contextMenu;
         }
@@ -4365,35 +4475,26 @@
             }
         }
 
-        private void AddSymbol_Click(object sender, RoutedEventArgs e)
+        private void AddSymbol(string symbolType)
         {
-            AddSymbol();
+            SymbolElement symbol = CreateSymbolFromLibrary(symbolType);
 
-            e.Handled = true;
-        }
+            symbol.X = _contextMenuPosition.X;
+            symbol.Y = _contextMenuPosition.Y;
 
-        private void AddSymbol()
-        {
-            var symbol =
-                new SymbolElement
-                {
-                    X = _contextMenuPosition.X,
-                    Y = _contextMenuPosition.Y,
-
-                    Width = 80,
-                    Height = 80,
-
-                    SymbolType = "Info"
-                };
-
+            symbol.Width = 80;
+            symbol.Height = 80;
 
             _symbols.Add(symbol);
 
             var control = CreateSymbolControl(symbol);
 
             this.WhiteBoardCanvas.Children.Add(control);
+
             this.StatusText.Text = "Symbol erstellt";
+
             this.UpdateBoardSize();
+
             this.WhiteBoardContextMenu.IsOpen = false;
         }
 
