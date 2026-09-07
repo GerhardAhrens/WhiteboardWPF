@@ -101,8 +101,8 @@
         public MainWindow()
         {
             this.InitializeComponent();
-            this.InitializeShapeMenu();
             this.InitializeElementLibrary();
+            this.InitializeShapeMenu();
             StatusText.Text = "Whiteboard bereit";
         }
 
@@ -1983,19 +1983,7 @@
 
         private void AddShape(ShapeType shapeType)
         {
-            var shape = new ShapeElement
-            {
-                ShapeType = shapeType,
-
-                X = _contextMenuPosition.X,
-                Y = _contextMenuPosition.Y,
-
-                Width = 160,
-                Height = 90,
-
-                Text = string.Empty
-            };
-
+            ShapeElement shape = this.CreateShapeFromLibrary(shapeType);
 
             var control = CreateShapeControl(shape);
 
@@ -2906,16 +2894,9 @@
             this.ShapeMenu.Items.Clear();
 
 
-            foreach (ShapeDefinition definition
-                     in ShapeDefinitionProvider.Definitions)
+            foreach (ShapeDefinition definition in ShapeDefinitionProvider.Definitions)
             {
-                var item =
-                    new MenuItem
-                    {
-                        Header = definition.Name,
-                        Tag = definition.Type
-                    };
-
+                var item = new MenuItem {Header = definition.Name, Tag = definition.Type };
 
                 item.Click += AddShapeFromMenu_Click;
 
