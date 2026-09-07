@@ -2172,9 +2172,9 @@
             }
 
 
-            ClearBoard();
+            this.ClearBoard();
 
-            StatusText.Text = "Neues Whiteboard erstellt";
+            this.StatusText.Text = "Neues Whiteboard erstellt";
         }
 
 
@@ -2431,37 +2431,27 @@
 
         private void ResetBoard_Click(object sender, RoutedEventArgs e)
         {
-            ClearBoard();
+            this.ClearBoard();
 
-            StatusText.Text = "Whiteboard zurückgesetzt";
+            this.StatusText.Text = "Whiteboard zurückgesetzt";
         }
 
 
         private void ClearBoard()
         {
-            _isDragging = false;
-
-            _isResizing = false;
-
-            _editingTextBox = null;
-
-            _selectedShape = null;
-
-            _selectedArrow = null;
-
-            _isCreatingArrow = false;
-
-            _arrowSourceShape = null;
-
-            _arrows.Clear();
-
-            _symbols.Clear();
-
-            _selectedSymbols.Clear();
-
-            _selectedSymbol = null;
-
-            WhiteBoardCanvas.Children.Clear();
+            this._isDragging = false;
+            this._isResizing = false;
+            this._editingTextBox = null;
+            this._selectedShape = null;
+            this._selectedArrow = null;
+            this._isCreatingArrow = false;
+            this._arrowSourceShape = null;
+            this._arrows.Clear();
+            this._symbols.Clear();
+            this._selectedSymbols.Clear();
+            this._selectedSymbol = null;
+            this.WhiteBoardCanvas.Children.Clear();
+            this.UpdateBoardSize();
         }
 
         // ============================================================
@@ -2602,7 +2592,7 @@
 
             try
             {
-                LoadBoard(dialog.FileName);
+                this.LoadBoard(dialog.FileName);
             }
             catch (Exception ex)
             {
@@ -2623,17 +2613,14 @@
             var options = CreateJsonOptions();
 
 
-            var document =
-                JsonSerializer.Deserialize<WhiteBoardDocument>(
-                    json,
-                    options);
+            var document = JsonSerializer.Deserialize<WhiteBoardDocument>(json, options);
 
 
             if (document == null)
                 throw new InvalidOperationException("Die Whiteboard-Datei konnte nicht gelesen werden.");
 
 
-            ClearBoard();
+            this.ClearBoard();
 
 
             // ========================================================
@@ -2691,14 +2678,14 @@
             // Auswahl zurücksetzen
             // ========================================================
 
-            SelectShape(null);
+            this.SelectShape(null);
 
-            SelectTextElement(null);
+            this.SelectTextElement(null);
 
-            SelectArrow(null);
+            this.SelectArrow(null);
+            this.UpdateBoardSize();
 
-
-            StatusText.Text = $"Board geladen: {fileName}";
+            this.StatusText.Text = $"Board geladen: {fileName}";
         }
 
         private void AddLoadedShape(ShapeElement shape)
@@ -3681,12 +3668,6 @@
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 this.DuplicateSelectedElements();
-                /*
-                this.DuplicateSelectedShapes();
-                this.DuplicateSelectedTextElements();
-                this.DuplicateSelectedSymbols();
-                this.DuplicateSelectedArrows();
-                */
 
                 e.Handled = true;
 
@@ -4628,7 +4609,7 @@
         {
             if (_selectedShapes.Count == 0 && _selectedTextElements.Count == 0 && _selectedSymbols.Count == 0)
             {
-                StatusText.Text = "Keine Elemente ausgewählt";
+                this.StatusText.Text = "Keine Elemente ausgewählt";
                 return;
             }
 
@@ -4642,12 +4623,13 @@
             List<Grid> symbolDuplicates = DuplicateSelectedSymbols();
 
             // Pfeile zwischen duplizierten Shapes duplizieren
-            DuplicateSelectedArrows();
+            this.DuplicateSelectedArrows();
 
             // Neue Elemente auswählen
-            SelectDuplicatedElements(shapeDuplicates, textDuplicates, symbolDuplicates);
+            this.SelectDuplicatedElements(shapeDuplicates, textDuplicates, symbolDuplicates);
 
-            StatusText.Text = $"{shapeDuplicates.Count} Shapes, {textDuplicates.Count} Texte und {symbolDuplicates.Count} Symbole dupliziert";
+            this.UpdateBoardSize();
+            this.StatusText.Text = $"{shapeDuplicates.Count} Shapes, {textDuplicates.Count} Texte und {symbolDuplicates.Count} Symbole dupliziert";
         }
 
 
