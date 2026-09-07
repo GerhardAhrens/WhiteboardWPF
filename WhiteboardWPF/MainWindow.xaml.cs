@@ -1,20 +1,19 @@
 ﻿namespace WhiteboardWPF
 {
     using System.Globalization;
-    using System.IO;
-    using System.Text.Json;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
     using System.Windows.Input;
     using System.Windows.Media;
-    using System.Windows.Media.Imaging;
 
     using Microsoft.Win32;
 
     using WhiteboardWPF.Board;
     using WhiteboardWPF.ElementLibrary;
+    using WhiteboardWPF.Exporter;
     using WhiteboardWPF.Models;
+    using WhiteboardWPF.Persistence;
     using WhiteboardWPF.Selection;
     using WhiteboardWPF.ShapeProvider;
 
@@ -32,6 +31,13 @@
         // Selektion
         // ============================================================
         private readonly SelectionManager _selectionManager = new();
+
+        // ============================================================
+        // Board Laden und Speichern, Export
+        // ============================================================
+        private readonly BoardPersistenceService _boardPersistenceService = new();
+        private readonly BoardDocumentBuilder _boardDocumentBuilder = new();
+        private readonly BoardExporter _boardExporter = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -146,6 +152,7 @@
 
         private List<System.Windows.Shapes.Path> _selectedArrows => _selectionManager.SelectedArrows;
         #endregion Properties
+
         #region Shapes und Symbole Bibliothek
         private void InitializeElementLibrary()
         {
@@ -329,118 +336,6 @@
         #endregion Shapes und Symbole Bibliothek
 
         #region Export als Bild-Datei
-        private void ExportBoardAsPng(string fileName)
-        {
-            UpdateLayout();
-
-            var resizeThumbs = WhiteBoardCanvas.Children
-                .OfType<Grid>()
-                .SelectMany(grid => grid.Children.OfType<Thumb>())
-                .ToList();
-
-            var oldResizeVisibility = resizeThumbs
-                .Select(thumb => thumb.Visibility)
-                .ToList();
-
-            try
-            {
-                // ---------------------------------------------------------
-                // Auswahlvisualisierung temporär deaktivieren
-                // ---------------------------------------------------------
-
-                foreach (Grid shape in _selectedShapes.ToList())
-                {
-                    SetShapeSelectedVisual(shape, false);
-                    SetResizeHandlesVisibility(
-                        shape,
-                        Visibility.Collapsed);
-                }
-
-                foreach (Grid text in _selectedTextElements.ToList())
-                {
-                    SetResizeHandlesVisibility(
-                        text,
-                        Visibility.Collapsed);
-                }
-
-                foreach (Grid symbol in _selectedSymbols.ToList())
-                {
-                    SetSymbolSelectedVisual(symbol, false);
-                    SetResizeHandlesVisibility(symbol, Visibility.Collapsed);
-                }
-
-                foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
-                {
-                    SetArrowSelectedVisual(arrow, false);
-                }
-
-                UpdateLayout();
-
-                // ---------------------------------------------------------
-                // Canvas rendern
-                // ---------------------------------------------------------
-
-                int width =
-                    (int)Math.Ceiling(WhiteBoardCanvas.Width);
-
-                int height =
-                    (int)Math.Ceiling(WhiteBoardCanvas.Height);
-
-                if (width <= 0 || height <= 0)
-                    return;
-
-                var renderBitmap = new RenderTargetBitmap(
-                    width,
-                    height,
-                    96,
-                    96,
-                    PixelFormats.Pbgra32);
-
-                renderBitmap.Render(WhiteBoardCanvas);
-
-                var encoder = new PngBitmapEncoder();
-
-                encoder.Frames.Add(
-                    BitmapFrame.Create(renderBitmap));
-
-                using FileStream stream = File.Create(fileName);
-
-                encoder.Save(stream);
-            }
-            finally
-            {
-                // ---------------------------------------------------------
-                // Resize-Handles exakt wiederherstellen
-                // ---------------------------------------------------------
-
-                for (int i = 0; i < resizeThumbs.Count; i++)
-                {
-                    resizeThumbs[i].Visibility =
-                        oldResizeVisibility[i];
-                }
-
-                // ---------------------------------------------------------
-                // Auswahlvisualisierung wiederherstellen
-                // ---------------------------------------------------------
-
-                foreach (Grid shape in _selectedShapes.ToList())
-                {
-                    SetShapeSelectedVisual(shape, true);
-                }
-
-                foreach (Grid symbol in _selectedSymbols.ToList())
-                {
-                    SetSymbolSelectedVisual(symbol, true);
-                }
-
-                foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
-                {
-                    SetArrowSelectedVisual(arrow, false);
-                }
-
-                UpdateLayout();
-            }
-        }
 
         private void ExportBoard_Click(object sender, RoutedEventArgs e)
         {
@@ -454,12 +349,21 @@
 
 
             if (dialog.ShowDialog() != true)
+            {
                 return;
+            }
 
 
             try
             {
-                this.ExportBoardAsPng(dialog.FileName);
+                this._boardExporter.ExportAsPng(dialog.FileName,
+                    this.WhiteBoardCanvas, 
+                    this._selectionManager,
+                    this.SetShapeSelectedVisual, 
+                    this.SetSymbolSelectedVisual, 
+                    this.SetArrowSelectedVisual, 
+                    this.SetResizeHandlesVisibility, 
+                    this.UpdateLayout);
             }
             catch (Exception ex)
             {
@@ -2889,22 +2793,12 @@
 
         private void SaveBoard(string fileName)
         {
-            UpdateTextElementsFromControls();
+            this.UpdateTextElementsFromControls();
 
-            var document =
-                new WhiteBoardDocument
-                {
-                    Version = 1,
-                    Shapes = GetShapeModels(),
-                    TextElements = _textElements.ToList(),
-                    Arrows = _arrows.ToList(),
-                    Symbols = _symbols.ToList()
-                };
+            var document = this._boardDocumentBuilder.Build(this.GetShapeModels(), this._textElements, this._arrows, this._symbols);
 
-            var options = CreateJsonOptions();
-            string json = JsonSerializer.Serialize(document, options);
-            File.WriteAllText(fileName, json);
-            StatusText.Text = $"Board gespeichert: {fileName}";
+            this._boardPersistenceService.Save(fileName, document);
+            this.StatusText.Text = $"Board gespeichert: {fileName}";
         }
 
         private List<ShapeElement> GetShapeModels()
@@ -2944,18 +2838,7 @@
 
         private void LoadBoard(string fileName)
         {
-            string json = File.ReadAllText(fileName);
-
-
-            var options = CreateJsonOptions();
-
-
-            var document = JsonSerializer.Deserialize<WhiteBoardDocument>(json, options);
-
-
-            if (document == null)
-                throw new InvalidOperationException("Die Whiteboard-Datei konnte nicht gelesen werden.");
-
+            WhiteBoardDocument document = this._boardPersistenceService.Load(fileName);
 
             this.ClearBoard();
 
@@ -3052,20 +2935,6 @@
 
             WhiteBoardCanvas.Children.Add(control);
         }
-
-        // ============================================================
-        // JSON Optionen
-        // ============================================================
-        private JsonSerializerOptions CreateJsonOptions()
-        {
-            return new JsonSerializerOptions
-            {
-                WriteIndented = true,
-
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-        }
-
 
         // ============================================================
         // Mehrfachmarkierung
