@@ -46,7 +46,7 @@
 
             <MenuItem Header="_Bearbeiten">
 
-                <MenuItem Click="Delete_Click" Header="_Löschen" />
+                <MenuItem Click="ClearBoard_Click" Header="_Löschen" />
 
             </MenuItem>
 

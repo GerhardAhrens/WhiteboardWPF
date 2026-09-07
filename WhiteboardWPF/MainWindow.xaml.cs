@@ -10,6 +10,7 @@
 
     using Microsoft.Win32;
 
+    using WhiteboardWPF.ElementLibrary;
     using WhiteboardWPF.Models;
     using WhiteboardWPF.ShapeProvider;
 
@@ -92,12 +93,89 @@
         private const double DuplicateOffset = 20;
         private readonly Dictionary<Guid, Guid> _duplicateIdMap = new();
 
+        // ============================================================
+        // Shapes und Symbole
+        // ============================================================
+        private readonly ElementLibrary.ElementLibrary _elementLibrary = new();
+
         public MainWindow()
         {
             this.InitializeComponent();
             this.InitializeShapeMenu();
+            this.InitializeElementLibrary();
             StatusText.Text = "Whiteboard bereit";
         }
+
+        #region Shapes und Symbole Bibliothek
+        private void InitializeElementLibrary()
+        {
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Rechteck",
+                    "Shape",
+                    () => new ShapeElement
+                    {
+                        ShapeType = ShapeType.Rectangle
+                    },
+                    ShapeType.Rectangle));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Abgerundetes Rechteck",
+                    "Shape",
+                    () => new ShapeElement
+                    {
+                        ShapeType = ShapeType.RoundedRectangle
+                    },
+                    ShapeType.RoundedRectangle));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Ellipse",
+                    "Shape",
+                    () => new ShapeElement
+                    {
+                        ShapeType = ShapeType.Ellipse
+                    },
+                    ShapeType.Ellipse));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Raute",
+                    "Shape",
+                    () => new ShapeElement
+                    {
+                        ShapeType = ShapeType.Diamond
+                    },
+                    ShapeType.Diamond));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Dreieck",
+                    "Shape",
+                    () => new ShapeElement
+                    {
+                        ShapeType = ShapeType.Triangle
+                    },
+                    ShapeType.Triangle));
+        }
+
+        private ShapeElement CreateShapeFromLibrary(ShapeType shapeType)
+        {
+            ElementLibraryItem? item = _elementLibrary.Items
+                .FirstOrDefault(item =>
+                    item.Category == "Shape" &&
+                    item.ShapeType == shapeType);
+
+            if (item == null)
+                throw new InvalidOperationException($"Shape '{shapeType}' ist nicht in der Elementbibliothek registriert.");
+
+            if (item.CreateModel() is not ShapeElement shape)
+                throw new InvalidOperationException($"Der Bibliothekseintrag '{item.Name}' erzeugt kein ShapeElement.");
+
+            return shape;
+        }
+        #endregion Shapes und Symbole Bibliothek
 
         private void UpdateBoardSize()
         {
@@ -1860,10 +1938,7 @@
 
             if (grid.Tag is ShapeElement shape)
             {
-                StatusText.Text =
-                    $"Shape-Größe: " +
-                    $"{shape.Width:0} x " +
-                    $"{shape.Height:0}";
+                StatusText.Text = $"Shape-Größe: {shape.Width:0} x {shape.Height:0}";
 
                 return;
             }
@@ -1871,10 +1946,7 @@
 
             if (grid.Tag is TextElement text)
             {
-                StatusText.Text =
-                    $"Text-Größe: " +
-                    $"{text.Width:0} x " +
-                    $"{text.Height:0}";
+                StatusText.Text = $"Text-Größe: {text.Width:0} x {text.Height:0}";
 
                 return;
             }
@@ -1882,10 +1954,7 @@
 
             if (grid.Tag is SymbolElement symbol)
             {
-                StatusText.Text =
-                    $"Symbol-Größe: " +
-                    $"{symbol.Width:0} x " +
-                    $"{symbol.Height:0}";
+                StatusText.Text = $"Symbol-Größe: {symbol.Width:0} x {symbol.Height:0}";
             }
         }
 
@@ -1895,9 +1964,7 @@
         }
 
 
-        private void AddRoundedRectangle_Click(
-            object sender,
-            RoutedEventArgs e)
+        private void AddRoundedRectangle_Click(object sender, RoutedEventArgs e)
         {
             AddShape(ShapeType.RoundedRectangle);
         }
@@ -2363,17 +2430,14 @@
             // Mehrfach ausgewählte Text-Elemente
             // ========================================================
 
-            if (_selectedTextElements.Count > 0)
+            if (this._selectedTextElements.Count > 0)
             {
-                var textsToDelete =
-                    _selectedTextElements
-                        .ToList();
+                var textsToDelete = this._selectedTextElements.ToList();
 
 
                 foreach (Grid textControl in textsToDelete)
                 {
-                    DeleteTextElement(
-                        textControl);
+                    this.DeleteTextElement(textControl);
 
                     deletedTexts++;
                 }
@@ -2389,10 +2453,9 @@
             // Einzelnes Text-Element
             // ========================================================
 
-            else if (_selectedTextElement != null)
+            else if (this._selectedTextElement != null)
             {
-                DeleteTextElement(
-                    _selectedTextElement);
+                this.DeleteTextElement(this._selectedTextElement);
 
                 deletedTexts++;
             }
@@ -2402,19 +2465,15 @@
             // Ergebnis
             // ========================================================
 
-            if (deletedShapes > 0 ||
-                deletedTexts > 0)
+            if (deletedShapes > 0 || deletedTexts > 0)
             {
-                StatusText.Text =
-                    $"{deletedShapes} Shape(s), " +
-                    $"{deletedTexts} Text(e) gelöscht";
+                this.StatusText.Text = $"{deletedShapes} Shape(s), {deletedTexts} Text(e) gelöscht";
 
                 return;
             }
 
 
-            StatusText.Text =
-                "Kein Element ausgewählt";
+            this.StatusText.Text = "Kein Element ausgewählt";
         }
 
         // ============================================================
@@ -2439,19 +2498,35 @@
 
         private void ClearBoard()
         {
-            this._isDragging = false;
-            this._isResizing = false;
-            this._editingTextBox = null;
-            this._selectedShape = null;
-            this._selectedArrow = null;
-            this._isCreatingArrow = false;
-            this._arrowSourceShape = null;
-            this._arrows.Clear();
-            this._symbols.Clear();
-            this._selectedSymbols.Clear();
-            this._selectedSymbol = null;
-            this.WhiteBoardCanvas.Children.Clear();
-            this.UpdateBoardSize();
+            _isDragging = false;
+            _isDraggingText = false;
+            _isDraggingSymbol = false;
+            _isResizing = false;
+            _editingTextBox = null;
+
+            _isCreatingArrow = false;
+            _arrowSourceShape = null;
+
+            _selectedShape = null;
+            _selectedTextElement = null;
+            _selectedSymbol = null;
+            _selectedArrow = null;
+
+            _selectedShapes.Clear();
+            _selectedTextElements.Clear();
+            _selectedSymbols.Clear();
+            _selectedArrows.Clear();
+
+            _multiDragStartPositions.Clear();
+            _multiDragStartTextPositions.Clear();
+            _multiDragStartSymbolPositions.Clear();
+
+            _arrows.Clear();
+            _symbols.Clear();
+
+            WhiteBoardCanvas.Children.Clear();
+
+            UpdateBoardSize();
         }
 
         // ============================================================
