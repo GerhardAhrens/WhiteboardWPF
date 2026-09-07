@@ -13,6 +13,7 @@ Dieses Demo dient dazu, ein klassisches Whiteboard in WPF/C# zu erstellen. Es si
 ## Funktionen
 Das Board ist mit einfachen grundlegen Funktionen ausgestattet.
 - Laden und Speichern der Board Elemente
+- Export als Bild
 - Shapes
   - Rechteck
   - Rechteck mit abgerundeten Ecken
@@ -23,6 +24,11 @@ Das Board ist mit einfachen grundlegen Funktionen ausgestattet.
   - Beschreibende Texte (können nicht mit Pfeilen verbunden werden)
 - Pfeile
   - Automatisches Verbinden durch eine Pfeilart
+- Symbole
+
+## Shapes und Symbole
+<img src="BoardShapes.png" style="width:650px;"/>
+<img src="BoardSymbole.png" style="width:650px;"/>
 
 
 ![Release](https://img.shields.io/badge/Version-1.0.2026.1-yellow.svg)

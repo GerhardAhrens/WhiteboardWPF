@@ -113,6 +113,9 @@
         public MainWindow()
         {
             this.InitializeComponent();
+
+            this.Title = "Whiteboard";
+
             this.InitializeElementLibrary();
             this.InitializeShapeMenu();
             this.InitializeSymbolMenu();
@@ -195,6 +198,16 @@
                         ShapeType = ShapeType.Diamond
                     },
                     ShapeType.Diamond));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                "Sechseck",
+                "Shape",
+                () => new ShapeElement
+                {
+                    ShapeType = ShapeType.Hexagon
+                },
+                ShapeType.Hexagon));
 
             _elementLibrary.Register(
                 new ElementLibraryItem(
@@ -481,6 +494,10 @@
             };
 
             backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Weiß","#FFFFFFFF"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Rot", "Red"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Grün", "Green"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Blau", "Blue"));
+            backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Gelb", "Yellow"));
             backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellgelb", "#FFFFF2CC"));
             backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellgrün", "#FFD9EAD3"));
             backgroundColorMenuItem.Items.Add(CreateBackgroundColorMenuItem("Hellblau", "#FFD9EAF7"));
