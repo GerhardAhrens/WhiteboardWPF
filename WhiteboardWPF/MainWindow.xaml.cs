@@ -12,6 +12,7 @@
 
     using Microsoft.Win32;
 
+    using WhiteboardWPF.Board;
     using WhiteboardWPF.ElementLibrary;
     using WhiteboardWPF.Models;
     using WhiteboardWPF.ShapeProvider;
@@ -21,6 +22,11 @@
     /// </summary>
     public partial class MainWindow : Window
     {
+        // ============================================================
+        // Board
+        // ============================================================
+        private readonly BoardSizeManager _boardSizeManager = new();
+
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
         // ============================================================
@@ -439,35 +445,7 @@
 
         private void UpdateBoardSize()
         {
-            double maxRight = 0;
-            double maxBottom = 0;
-
-            foreach (FrameworkElement element in WhiteBoardCanvas.Children.OfType<FrameworkElement>())
-            {
-                double left = Canvas.GetLeft(element);
-                double top = Canvas.GetTop(element);
-
-                if (double.IsNaN(left))
-                    left = 0;
-
-                if (double.IsNaN(top))
-                    top = 0;
-
-                double width = element.Width;
-                double height = element.Height;
-
-                if (double.IsNaN(width))
-                    width = element.ActualWidth;
-
-                if (double.IsNaN(height))
-                    height = element.ActualHeight;
-
-                maxRight = Math.Max(maxRight, left + width);
-                maxBottom = Math.Max(maxBottom, top + height);
-            }
-
-            WhiteBoardCanvas.Width = Math.Max(800, maxRight + 50);
-            WhiteBoardCanvas.Height = Math.Max(500, maxBottom + 50);
+            this._boardSizeManager.Update(WhiteBoardCanvas);
         }
 
         // ============================================================
