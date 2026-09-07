@@ -8,6 +8,7 @@
     using System.Windows.Controls.Primitives;
     using System.Windows.Input;
     using System.Windows.Media;
+    using System.Windows.Media.Imaging;
 
     using Microsoft.Win32;
 
@@ -190,11 +191,20 @@
 
             _elementLibrary.Register(
                 new ElementLibraryItem(
-                    "Gleich =",
+                    "Gleich",
                     "Symbol",
                     () => new SymbolElement
                     {
                         SymbolType = "Equals"
+                    }));
+
+            _elementLibrary.Register(
+                new ElementLibraryItem(
+                    "Ungleich",
+                    "Symbol",
+                    () => new SymbolElement
+                    {
+                        SymbolType = "NotEquals"
                     }));
         }
 
@@ -274,11 +284,158 @@
                 "Warning" => CreateWarningSymbol(),
                 "Question" => CreateQuestionSymbol(),
                 "Equals" => CreateEqualsSymbol(),
+                "NotEquals" => CreateNotEqualsSymbol(),
 
                 _ => CreateInfoSymbol()
             };
         }
         #endregion Shapes und Symbole Bibliothek
+
+        #region Export als Bild-Datei
+        private void ExportBoardAsPng(string fileName)
+        {
+            UpdateLayout();
+
+            var resizeThumbs = WhiteBoardCanvas.Children
+                .OfType<Grid>()
+                .SelectMany(grid => grid.Children.OfType<Thumb>())
+                .ToList();
+
+            var oldResizeVisibility = resizeThumbs
+                .Select(thumb => thumb.Visibility)
+                .ToList();
+
+            try
+            {
+                // ---------------------------------------------------------
+                // Auswahlvisualisierung temporär deaktivieren
+                // ---------------------------------------------------------
+
+                foreach (Grid shape in _selectedShapes.ToList())
+                {
+                    SetShapeSelectedVisual(shape, false);
+                    SetResizeHandlesVisibility(
+                        shape,
+                        Visibility.Collapsed);
+                }
+
+                foreach (Grid text in _selectedTextElements.ToList())
+                {
+                    SetResizeHandlesVisibility(
+                        text,
+                        Visibility.Collapsed);
+                }
+
+                foreach (Grid symbol in _selectedSymbols.ToList())
+                {
+                    SetSymbolSelectedVisual(symbol, false);
+                    SetResizeHandlesVisibility(symbol, Visibility.Collapsed);
+                }
+
+                foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
+                {
+                    SetArrowSelectedVisual(arrow, false);
+                }
+
+                UpdateLayout();
+
+                // ---------------------------------------------------------
+                // Canvas rendern
+                // ---------------------------------------------------------
+
+                int width =
+                    (int)Math.Ceiling(WhiteBoardCanvas.Width);
+
+                int height =
+                    (int)Math.Ceiling(WhiteBoardCanvas.Height);
+
+                if (width <= 0 || height <= 0)
+                    return;
+
+                var renderBitmap = new RenderTargetBitmap(
+                    width,
+                    height,
+                    96,
+                    96,
+                    PixelFormats.Pbgra32);
+
+                renderBitmap.Render(WhiteBoardCanvas);
+
+                var encoder = new PngBitmapEncoder();
+
+                encoder.Frames.Add(
+                    BitmapFrame.Create(renderBitmap));
+
+                using FileStream stream = File.Create(fileName);
+
+                encoder.Save(stream);
+            }
+            finally
+            {
+                // ---------------------------------------------------------
+                // Resize-Handles exakt wiederherstellen
+                // ---------------------------------------------------------
+
+                for (int i = 0; i < resizeThumbs.Count; i++)
+                {
+                    resizeThumbs[i].Visibility =
+                        oldResizeVisibility[i];
+                }
+
+                // ---------------------------------------------------------
+                // Auswahlvisualisierung wiederherstellen
+                // ---------------------------------------------------------
+
+                foreach (Grid shape in _selectedShapes.ToList())
+                {
+                    SetShapeSelectedVisual(shape, true);
+                }
+
+                foreach (Grid symbol in _selectedSymbols.ToList())
+                {
+                    SetSymbolSelectedVisual(symbol, true);
+                }
+
+                foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
+                {
+                    SetArrowSelectedVisual(arrow, false);
+                }
+
+                UpdateLayout();
+            }
+        }
+
+        private void ExportBoard_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SaveFileDialog
+                {
+                    Title = "Whiteboard exportieren",
+                    Filter = "Whiteboard (*.png)|*.png|" + "Alle Dateien (*.*)|*.*",
+                    DefaultExt = ".png",
+                    AddExtension = true
+                };
+
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+
+            try
+            {
+                this.ExportBoardAsPng(dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Das Whiteboard konnte nicht exportiert werden.\n\n" +
+                    $"{ex.Message}",
+                    "Fehler beim Exportieren",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        #endregion Export als Bild-Datei
 
         private void UpdateBoardSize()
         {
@@ -4254,31 +4411,18 @@
         {
             var drawingGroup = new DrawingGroup();
 
+            // Blauer Kreis
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
 
-            using (DrawingContext dc = drawingGroup.Open())
-            {
-                // ====================================================
-                // Kreis
-                // ====================================================
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
 
-                var pen = new Pen(Brushes.DimGray, 3);
+            // Gleichheitszeichen
+            var formattedText = new FormattedText("i", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
 
-                var brush = Brushes.DodgerBlue;
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(35, 7));
 
-                dc.DrawEllipse(brush, pen, new Point(40, 40), 36, 36);
-
-
-                // ====================================================
-                // "i"
-                // ====================================================
-
-                var typeface = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
-
-                var text = new FormattedText("i", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 42, Brushes.White, 1.0);
-
-                dc.DrawText(text, new Point( 34, 10));
-            }
-
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
 
             return new DrawingImage(drawingGroup);
         }
@@ -4304,15 +4448,15 @@
             var drawingGroup = new DrawingGroup();
 
             // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 35, 35);
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
 
             drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
 
             // Fragezeichen
             var formattedText = new FormattedText("?", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, 
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 44, Brushes.White, 1.0);
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
 
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(40 - formattedText.Width / 2, 40 - formattedText.Height / 2));
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(30, 10));
 
             drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
 
@@ -4324,20 +4468,41 @@
             var drawingGroup = new DrawingGroup();
 
             // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 35, 35);
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
 
             drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
 
             // Gleichheitszeichen
             var formattedText = new FormattedText("=", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 44, Brushes.White, 1.0);
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
 
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(40 - formattedText.Width / 2, 40 - formattedText.Height / 2 - 2));
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(25, 7));
 
             drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
 
             return new DrawingImage(drawingGroup);
         }
+
+        private DrawingImage CreateNotEqualsSymbol()
+        {
+            var drawingGroup = new DrawingGroup();
+
+            // Blauer Kreis
+            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
+
+            // Gleichheitszeichen
+            var formattedText = new FormattedText("≠", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
+
+            Geometry textGeometry = formattedText.BuildGeometry(new Point(25, 7));
+
+            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
+
+            return new DrawingImage(drawingGroup);
+        }
+
 
         private Grid CreateSymbolControl(SymbolElement symbol)
         {

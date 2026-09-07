@@ -39,6 +39,10 @@
 
                 <Separator />
 
+                <MenuItem Click="ExportBoard_Click"  Header="Exportieren als PNG" />
+
+                <Separator />
+
                 <MenuItem Click="Exit_Click" Header="_Beenden" />
 
             </MenuItem>
