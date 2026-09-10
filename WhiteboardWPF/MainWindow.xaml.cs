@@ -44,6 +44,7 @@
         // Gemeinsame Grundfunktionen für die Erzeugung von Whiteboard-Controls.
         // ============================================================
         private readonly ElementControlFactory _elementControlFactory = new();
+        private readonly ShapeVisualFactory _shapeVisualFactory = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -414,9 +415,9 @@
         /// <param name="e"></param>
         private void WhiteBoardCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _contextMenuPosition = e.GetPosition(WhiteBoardCanvas);
+            this._contextMenuPosition = e.GetPosition(WhiteBoardCanvas);
 
-            StatusText.Text = $"Position: X={_contextMenuPosition.X:0}, Y={_contextMenuPosition.Y:0}";
+            this.StatusText.Text = $"Position: X={_contextMenuPosition.X:0}, Y={_contextMenuPosition.Y:0}";
         }
 
         /// <summary>
@@ -426,7 +427,7 @@
         /// <param name="e"></param>
         private void WhiteBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            SelectShape(null);
+            this.SelectShape(null);
         }
 
         /// <summary>
@@ -451,13 +452,13 @@
 
             var control = CreateShapeControl(shape);
 
-            WhiteBoardCanvas.Children.Add(control);
+            this.WhiteBoardCanvas.Children.Add(control);
 
-            SelectShape(control);
+            this.SelectShape(control);
 
-            StatusText.Text = "Shape erstellt";
+            this.StatusText.Text = "Shape erstellt";
 
-            WhiteBoardContextMenu.IsOpen = false;
+            this.WhiteBoardContextMenu.IsOpen = false;
         }
 
         /// <summary>
@@ -523,18 +524,23 @@
         private void ShapeEditText_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not MenuItem menuItem)
+            {
                 return;
+            }
 
             if (menuItem.Parent is not ContextMenu contextMenu)
+            {
                 return;
+            }
 
             if (contextMenu.PlacementTarget is not Grid shape)
+            {
                 return;
+            }
 
+            this.SelectShape(shape);
 
-            SelectShape(shape);
-
-            BeginTextEditing(shape);
+            this.BeginTextEditing(shape);
         }
 
         /// <summary>
@@ -605,25 +611,21 @@
 
             grid.Children.Add(textBox);
 
-
             // --------------------------------------------------------
             // Contextmenü für das Shape
             // --------------------------------------------------------
-
             var shapeContextMenu = CreateShapeContextMenu();
             grid.ContextMenu = shapeContextMenu;
 
             // --------------------------------------------------------
             // Position
             // --------------------------------------------------------
-
             Canvas.SetLeft(grid, shape.X);
             Canvas.SetTop(grid, shape.Y);
 
             // --------------------------------------------------------
             // Verschieben
             // --------------------------------------------------------
-
             grid.PreviewMouseLeftButtonDown += Shape_PreviewMouseLeftButtonDown;
             grid.PreviewMouseMove += Shape_PreviewMouseMove;
             grid.PreviewMouseLeftButtonUp += Shape_PreviewMouseLeftButtonUp;
@@ -631,7 +633,6 @@
             // --------------------------------------------------------
             // Resize-Griffe
             // --------------------------------------------------------
-
             AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
             AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
             AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
@@ -652,29 +653,27 @@
         private void BeginTextEditing(Grid shape)
         {
             if (shape.Tag is not ShapeElement model)
+            {
                 return;
+            }
 
 
-            var textBox =
-                FindTextBox(shape);
+            var textBox = this.FindTextBox(shape);
 
             if (textBox == null)
+            {
                 return;
+            }
 
+            this._editingTextBox = textBox;
 
-            _editingTextBox = textBox;
-
-            _textBeforeEditing = model.Text;
-
+            this._textBeforeEditing = model.Text;
 
             textBox.IsReadOnly = false;
-
             textBox.Focus();
-
             textBox.SelectAll();
 
-
-            StatusText.Text = "Text bearbeiten";
+            this.StatusText.Text = "Text bearbeiten";
         }
 
         /// <summary>
@@ -702,17 +701,17 @@
         private void ShapeTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (sender is not TextBox textBox)
+            {
                 return;
+            }
 
 
             // --------------------------------------------------------
             // Enter = übernehmen
             // --------------------------------------------------------
-
             if (e.Key == Key.Enter)
             {
-                FinishTextEditing(textBox);
-
+                this.FinishTextEditing(textBox);
                 e.Handled = true;
 
                 return;
@@ -722,11 +721,9 @@
             // --------------------------------------------------------
             // Escape = abbrechen
             // --------------------------------------------------------
-
             if (e.Key == Key.Escape)
             {
-                CancelTextEditing(textBox);
-
+                this.CancelTextEditing(textBox);
                 e.Handled = true;
             }
         }
@@ -740,14 +737,17 @@
         private void ShapeTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             if (sender is not TextBox textBox)
+            {
                 return;
+            }
 
 
-            if (_editingTextBox != textBox)
+            if (this._editingTextBox != textBox)
+            {
                 return;
+            }
 
-
-            FinishTextEditing(textBox);
+            this.FinishTextEditing(textBox);
         }
 
 
@@ -759,23 +759,23 @@
         private void FinishTextEditing(TextBox textBox)
         {
             if (textBox.Parent is not Grid shape)
+            {
                 return;
+            }
 
 
             if (shape.Tag is not ShapeElement model)
+            {
                 return;
-
+            }
 
             model.Text = textBox.Text;
 
-
             textBox.IsReadOnly = true;
 
+            this._editingTextBox = null;
 
-            _editingTextBox = null;
-
-
-            StatusText.Text = "Text übernommen";
+            this.StatusText.Text = "Text übernommen";
         }
 
 
@@ -793,19 +793,15 @@
             if (shape.Tag is not ShapeElement model)
                 return;
 
-
             textBox.Text = _textBeforeEditing;
 
             model.Text = _textBeforeEditing;
 
-
             textBox.IsReadOnly = true;
-
 
             _editingTextBox = null;
 
-
-            StatusText.Text = "Textbearbeitung abgebrochen";
+            this.StatusText.Text = "Textbearbeitung abgebrochen";
         }
 
 
@@ -843,15 +839,12 @@
             thumb.DragDelta += ResizeThumb_DragDelta;
             thumb.DragCompleted += ResizeThumb_DragCompleted;
 
-
             grid.Children.Add(thumb);
         }
-
 
         // ============================================================
         // Resize Cursor
         // ============================================================
-
         private Cursor GetResizeCursor(ResizeDirection direction)
         {
             return direction switch
@@ -884,13 +877,13 @@
         private void Shape_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not Grid shape)
+            {
                 return;
-
+            }
 
             // ========================================================
             // Pfeil erstellen
             // ========================================================
-
             if (_isCreatingArrow)
             {
                 CreateArrow(_arrowSourceShape, shape);
@@ -2199,77 +2192,7 @@
 
         private FrameworkElement CreateShapeVisual(ShapeElement shape)
         {
-            switch (shape.ShapeType)
-            {
-                case ShapeType.Rectangle:
-                    {
-                        return new Border
-                        {
-                            Background = this.GetShapeBackgroundBrush(shape),
-                            BorderBrush = Brushes.DimGray,
-                            BorderThickness = new Thickness(2),
-                            CornerRadius = new CornerRadius(0),
-                            IsHitTestVisible = true
-                        };
-                    }
-
-
-                case ShapeType.RoundedRectangle:
-                    {
-                        return new Border
-                        {
-                            Background = this.GetShapeBackgroundBrush(shape),
-                            BorderBrush = Brushes.DimGray,
-                            BorderThickness = new Thickness(2),
-                            CornerRadius = new CornerRadius(15),
-                            IsHitTestVisible = true
-                        };
-                    }
-
-
-                case ShapeType.Ellipse:
-                    {
-                        return new System.Windows.Shapes.Ellipse
-                        {
-                            Fill = this.GetShapeBackgroundBrush(shape),
-                            Stroke = Brushes.DimGray,
-                            StrokeThickness = 2,
-                            IsHitTestVisible = true
-                        };
-                    }
-
-
-                case ShapeType.Diamond:
-                    {
-                        return new System.Windows.Shapes.Polygon
-                        {
-                            Fill = this.GetShapeBackgroundBrush(shape),
-                            Stroke = Brushes.DimGray,
-                            StrokeThickness = 2,
-                            Points = new PointCollection
-                                        {
-                                            new Point(0.5, 0),
-                                            new Point(1, 0.5),
-                                            new Point(0.5, 1),
-                                            new Point(0, 0.5)
-                                        },
-
-                            Stretch = Stretch.Fill,
-                            IsHitTestVisible = true
-                        };
-                    }
-                case ShapeType.Triangle:
-                    {
-                        return CreateTriangleVisual(shape);
-                    }
-
-                case ShapeType.Hexagon:
-                    {
-                        return CreateHexagonVisual(shape);
-                    }
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return _shapeVisualFactory.Create(shape, GetShapeBackgroundBrush(shape));
         }
 
         private void SetShapeSelectedVisual(Grid shape, bool selected)
@@ -2296,10 +2219,10 @@
             }
         }
 
-        // ============================================================
-        // Auswahl
-        // ============================================================
-
+        /// <summary>
+        /// Auswahl
+        /// </summary>
+        /// <param name="shape"></param>
         private void SelectShape(Grid? shape)
         {
             // ========================================================
@@ -2381,7 +2304,6 @@
             }
         }
 
-
         // ============================================================
         // Höchsten ZIndex ermitteln
         // ============================================================
@@ -2399,7 +2321,6 @@
 
             return highest;
         }
-
 
         // ============================================================
         // Neues Board
@@ -2420,17 +2341,14 @@
                     return;
             }
 
-
             this.ClearBoard();
 
             this.StatusText.Text = "Neues Whiteboard erstellt";
         }
 
-
         // ============================================================
         // Beenden
         // ============================================================
-
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -5065,21 +4983,13 @@
         private enum ResizeDirection
         {
             None = 0,
-
             Left = 1,
-
             Right = 2,
-
             Top = 4,
-
             Bottom = 8,
-
             TopLeft = Top | Left,
-
             TopRight = Top | Right,
-
             BottomLeft = Bottom | Left,
-
             BottomRight = Bottom | Right
         }
     }
