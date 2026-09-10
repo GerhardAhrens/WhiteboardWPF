@@ -11,6 +11,7 @@
 
     using WhiteboardWPF.Board;
     using WhiteboardWPF.ElementLibrary;
+    using WhiteboardWPF.Elements;
     using WhiteboardWPF.Exporter;
     using WhiteboardWPF.Models;
     using WhiteboardWPF.Persistence;
@@ -38,6 +39,11 @@
         private readonly BoardPersistenceService _boardPersistenceService = new();
         private readonly BoardDocumentBuilder _boardDocumentBuilder = new();
         private readonly BoardExporter _boardExporter = new();
+
+        // ============================================================
+        // Gemeinsame Grundfunktionen für die Erzeugung von Whiteboard-Controls.
+        // ============================================================
+        private readonly ElementControlFactory _elementControlFactory = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -559,14 +565,7 @@
         // ============================================================
         private Grid CreateShapeControl(ShapeElement shape)
         {
-            var grid = new Grid
-            {
-                Width = shape.Width,
-                Height = shape.Height,
-
-                Tag = shape
-            };
-
+            Grid grid = _elementControlFactory.CreateBaseGrid(shape.Width, shape.Height, shape, shape.X, shape.Y);
 
             // --------------------------------------------------------
             // Shape
@@ -3345,15 +3344,9 @@
 
         private Grid CreateTextControl(TextElement text)
         {
-            var grid = new Grid
-            {
-                Width = text.Width,
-                Height = text.Height,
-                Tag = text
-            };
+            Grid grid = _elementControlFactory.CreateBaseGrid(text.Width, text.Height, text, text.X, text.Y);
 
-
-            var textBox = new TextBox
+            TextBox textBox = new TextBox
             {
                 Text = text.Text,
                 FontSize = text.FontSize,
@@ -4401,19 +4394,13 @@
 
         private Grid CreateSymbolControl(SymbolElement symbol)
         {
-            var grid = new Grid
-            {
-                Width = symbol.Width,
-                Height = symbol.Height,
-                Tag = symbol
-            };
-
+            Grid grid = _elementControlFactory.CreateBaseGrid(symbol.Width, symbol.Height, symbol, symbol.X, symbol.Y);
 
             // ========================================================
             // Symbol
             // ========================================================
 
-            var image = new Image
+            Image image = new Image
                 {
                     Source = CreateSymbolImage(symbol.SymbolType),
 
@@ -4424,7 +4411,6 @@
 
 
             grid.Children.Add(image);
-
 
             // ========================================================
             // Position
@@ -4440,7 +4426,6 @@
             grid.PreviewMouseLeftButtonDown += Symbol_PreviewMouseLeftButtonDown;
             grid.PreviewMouseMove += Symbol_PreviewMouseMove;
             grid.PreviewMouseLeftButtonUp += Symbol_PreviewMouseLeftButtonUp;
-
 
             // ========================================================
             // Resize
