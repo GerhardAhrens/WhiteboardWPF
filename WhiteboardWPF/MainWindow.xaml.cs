@@ -45,6 +45,7 @@
         // ============================================================
         private readonly ElementControlFactory _elementControlFactory = new();
         private readonly ShapeVisualFactory _shapeVisualFactory = new();
+        private readonly ShapeTextBoxFactory _shapeTextBoxFactory = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -586,28 +587,7 @@
             // Text
             // --------------------------------------------------------
 
-            var textBox = new TextBox
-            {
-                Text = shape.Text,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                TextAlignment = TextAlignment.Center,
-                TextWrapping = TextWrapping.Wrap,
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(8),
-                FontSize = 16,
-                IsReadOnly = true,
-                IsHitTestVisible = true,
-                Cursor = Cursors.Arrow,
-                Tag = shape
-            };
-
-            textBox.MouseDoubleClick += ShapeText_MouseDoubleClick;
-            textBox.KeyDown += ShapeTextBox_KeyDown;
-            textBox.LostFocus += ShapeTextBox_LostFocus;
+            var textBox = _shapeTextBoxFactory.Create(shape, ShapeText_MouseDoubleClick, ShapeTextBox_KeyDown, ShapeTextBox_LostFocus);
 
             grid.Children.Add(textBox);
 
