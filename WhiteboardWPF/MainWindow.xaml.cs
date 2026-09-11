@@ -46,6 +46,7 @@
         private readonly ElementControlFactory _elementControlFactory = new();
         private readonly ShapeVisualFactory _shapeVisualFactory = new();
         private readonly ShapeTextBoxFactory _shapeTextBoxFactory = new();
+        private readonly ResizeThumbFactory _resizeThumbFactory = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -613,14 +614,14 @@
             // --------------------------------------------------------
             // Resize-Griffe
             // --------------------------------------------------------
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
-            AddResizeThumb(grid, HorizontalAlignment.Left,VerticalAlignment.Center, ResizeDirection.Left);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Top));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopRight));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Left));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Right));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Bottom));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomRight));
 
             return grid;
         }
@@ -784,44 +785,6 @@
             this.StatusText.Text = "Textbearbeitung abgebrochen";
         }
 
-
-        /// <summary>
-        /// Resize Thumb hinzufügen
-        /// </summary>
-        /// <param name="grid"></param>
-        /// <param name="horizontalAlignment"></param>
-        /// <param name="verticalAlignment"></param>
-        /// <param name="direction"></param>
-        private void AddResizeThumb(Grid grid, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment, ResizeDirection direction)
-        {
-            var thumb = new Thumb
-            {
-                Width = 10,
-                Height = 10,
-
-                HorizontalAlignment = horizontalAlignment,
-
-                VerticalAlignment = verticalAlignment,
-
-                Background = Brushes.White,
-                BorderBrush = Brushes.DodgerBlue,
-                BorderThickness = new Thickness(1),
-
-                Cursor = GetResizeCursor(direction),
-
-                Tag = direction,
-
-                Visibility = Visibility.Collapsed
-            };
-
-
-            thumb.DragStarted += ResizeThumb_DragStarted;
-            thumb.DragDelta += ResizeThumb_DragDelta;
-            thumb.DragCompleted += ResizeThumb_DragCompleted;
-
-            grid.Children.Add(thumb);
-        }
-
         // ============================================================
         // Resize Cursor
         // ============================================================
@@ -830,19 +793,12 @@
             return direction switch
             {
                 ResizeDirection.TopLeft => Cursors.SizeNWSE,
-
                 ResizeDirection.Top => Cursors.SizeNS,
-
                 ResizeDirection.TopRight => Cursors.SizeNESW,
-
                 ResizeDirection.Left => Cursors.SizeWE,
-
                 ResizeDirection.Right => Cursors.SizeWE,
-
                 ResizeDirection.BottomLeft => Cursors.SizeNESW,
-
                 ResizeDirection.Bottom => Cursors.SizeNS,
-
                 ResizeDirection.BottomRight => Cursors.SizeNWSE,
 
                 _ => Cursors.Arrow
@@ -3290,14 +3246,17 @@
             grid.PreviewMouseMove += TextElement_PreviewMouseMove;
             grid.PreviewMouseLeftButtonUp += TextElement_PreviewMouseLeftButtonUp;
 
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
+            // --------------------------------------------------------
+            // Resize-Griffe
+            // --------------------------------------------------------
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Top));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopRight));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Left));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Right));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Bottom));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomRight));
 
             Canvas.SetLeft(grid, text.X);
             Canvas.SetTop(grid, text.Y);
@@ -4325,18 +4284,17 @@
             grid.PreviewMouseMove += Symbol_PreviewMouseMove;
             grid.PreviewMouseLeftButtonUp += Symbol_PreviewMouseLeftButtonUp;
 
-            // ========================================================
-            // Resize
-            // ========================================================
-
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight);
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right);
-            AddResizeThumb(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft);
-            AddResizeThumb(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom);
-            AddResizeThumb(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight);
+            // --------------------------------------------------------
+            // Resize-Griffe
+            // --------------------------------------------------------
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Top, ResizeDirection.TopLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Top, ResizeDirection.Top, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Top));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Top, ResizeDirection.TopRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.TopRight));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Center, ResizeDirection.Left, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Left));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Center, ResizeDirection.Right, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Right));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Left, VerticalAlignment.Bottom, ResizeDirection.BottomLeft, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomLeft));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Center, VerticalAlignment.Bottom, ResizeDirection.Bottom, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.Bottom));
+            _resizeThumbFactory.Add(grid, HorizontalAlignment.Right, VerticalAlignment.Bottom, ResizeDirection.BottomRight, ResizeThumb_DragStarted, ResizeThumb_DragDelta, ResizeThumb_DragCompleted, GetResizeCursor(ResizeDirection.BottomRight));
 
             // ========================================================
             // Contextmenü
@@ -4954,23 +4912,23 @@
 
             return duplicates;
         }
+    }
 
-        // ============================================================
-        // Resize-Richtungen
-        // ============================================================
+    // ============================================================
+    // Resize-Richtungen
+    // ============================================================
 
-        [Flags]
-        private enum ResizeDirection
-        {
-            None = 0,
-            Left = 1,
-            Right = 2,
-            Top = 4,
-            Bottom = 8,
-            TopLeft = Top | Left,
-            TopRight = Top | Right,
-            BottomLeft = Bottom | Left,
-            BottomRight = Bottom | Right
-        }
+    [Flags]
+    public enum ResizeDirection
+    {
+        None = 0,
+        Left = 1,
+        Right = 2,
+        Top = 4,
+        Bottom = 8,
+        TopLeft = Top | Left,
+        TopRight = Top | Right,
+        BottomLeft = Bottom | Left,
+        BottomRight = Bottom | Right
     }
 }
