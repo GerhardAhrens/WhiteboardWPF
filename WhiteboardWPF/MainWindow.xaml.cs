@@ -47,6 +47,8 @@
         private readonly ShapeVisualFactory _shapeVisualFactory = new();
         private readonly ShapeTextBoxFactory _shapeTextBoxFactory = new();
         private readonly ResizeThumbFactory _resizeThumbFactory = new();
+        private readonly TextElementTextBoxFactory _textElementTextBoxFactory = new();
+        private readonly SymbolVisualFactory _symbolVisualFactory = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -342,19 +344,6 @@
             e.Handled = true;
         }
 
-        private DrawingImage CreateSymbolImage(string symbolType)
-        {
-            return symbolType switch
-            {
-                "Info" => CreateInfoSymbol(),
-                "Warning" => CreateWarningSymbol(),
-                "Question" => CreateQuestionSymbol(),
-                "Equals" => CreateEqualsSymbol(),
-                "NotEquals" => CreateNotEqualsSymbol(),
-
-                _ => CreateInfoSymbol()
-            };
-        }
         #endregion Shapes und Symbole Bibliothek
 
         #region Export als Bild-Datei
@@ -607,9 +596,7 @@
             // --------------------------------------------------------
             // Verschieben
             // --------------------------------------------------------
-            grid.PreviewMouseLeftButtonDown += Shape_PreviewMouseLeftButtonDown;
-            grid.PreviewMouseMove += Shape_PreviewMouseMove;
-            grid.PreviewMouseLeftButtonUp += Shape_PreviewMouseLeftButtonUp;
+            this.ConfigureShapeMouseEvents(grid);
 
             // --------------------------------------------------------
             // Resize-Griffe
@@ -626,6 +613,12 @@
             return grid;
         }
 
+        private void ConfigureShapeMouseEvents(Grid grid)
+        {
+            grid.PreviewMouseLeftButtonDown += Shape_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += Shape_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += Shape_PreviewMouseLeftButtonUp;
+        }
 
         /// <summary>
         /// Textbearbeitung starten
@@ -2782,10 +2775,6 @@
         {
             var control = CreateShapeControl(shape);
 
-
-            Canvas.SetLeft(control, shape.X);
-            Canvas.SetTop(control, shape.Y);
-
             WhiteBoardCanvas.Children.Add(control);
         }
 
@@ -3200,51 +3189,15 @@
         {
             Grid grid = _elementControlFactory.CreateBaseGrid(text.Width, text.Height, text, text.X, text.Y);
 
-            TextBox textBox = new TextBox
-            {
-                Text = text.Text,
-                FontSize = text.FontSize,
-                AcceptsReturn = true,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch,
-                HorizontalContentAlignment =  HorizontalAlignment.Left,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                TextAlignment = TextAlignment.Left,
-                TextWrapping = TextWrapping.Wrap,
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(4),
-                IsReadOnly = true,
-                IsHitTestVisible = true,
-                Cursor = Cursors.Arrow,
-                Tag = text
-            };
-
-            textBox.KeyDown += TextElement_KeyDown;
-            textBox.LostFocus += TextElement_LostFocus;
-
-            var textContextMenu = new ContextMenu();
-
-            var deleteMenuItem = new MenuItem
-            {
-                Header = "Löschen"
-            };
-
-            deleteMenuItem.Click += TextElement_DeleteClick;
-
-            textContextMenu.Items.Add(deleteMenuItem);
-
-            grid.ContextMenu = textContextMenu;
+            var textBox = _textElementTextBoxFactory.Create(text, TextElement_KeyDown, TextElement_LostFocus);
 
             grid.Children.Add(textBox);
+            grid.ContextMenu = CreateTextElementContextMenu();
 
             // --------------------------------------------------------
             // Verschieben
             // --------------------------------------------------------
-
-            grid.PreviewMouseLeftButtonDown += TextElement_PreviewMouseLeftButtonDown;
-            grid.PreviewMouseMove += TextElement_PreviewMouseMove;
-            grid.PreviewMouseLeftButtonUp += TextElement_PreviewMouseLeftButtonUp;
+            this.ConfigureTextElementMouseEvents(grid);
 
             // --------------------------------------------------------
             // Resize-Griffe
@@ -3262,6 +3215,29 @@
             Canvas.SetTop(grid, text.Y);
 
             return grid;
+        }
+
+        private void ConfigureTextElementMouseEvents(Grid grid)
+        {
+            grid.PreviewMouseLeftButtonDown += TextElement_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += TextElement_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += TextElement_PreviewMouseLeftButtonUp;
+        }
+
+        private ContextMenu CreateTextElementContextMenu()
+        {
+            var contextMenu = new ContextMenu();
+
+            var deleteMenuItem = new MenuItem
+            {
+                Header = "Löschen"
+            };
+
+            deleteMenuItem.Click += TextElement_DeleteClick;
+
+            contextMenu.Items.Add(deleteMenuItem);
+
+            return contextMenu;
         }
 
         private void TextElement_DeleteClick(object sender, RoutedEventArgs e)
@@ -4149,106 +4125,6 @@
             StatusText.Text = $"Hintergrundfarbe geändert: {colorString}";
         }
 
-        // ============================================================
-        // Symbole mit DrawingImage
-        // ============================================================
-        private DrawingImage CreateInfoSymbol()
-        {
-            var drawingGroup = new DrawingGroup();
-
-            // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
-
-            // Gleichheitszeichen
-            var formattedText = new FormattedText("i", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
-
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(35, 7));
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
-
-            return new DrawingImage(drawingGroup);
-        }
-
-        private DrawingImage CreateWarningSymbol()
-        {
-            var drawingGroup = new DrawingGroup();
-
-            var geometry = Geometry.Parse("M 40,5 L 75,70 L 5,70 Z");
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.Gold, new Pen(Brushes.Black, 2), geometry));
-
-            var textGeometry = new FormattedText("!", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 36, Brushes.Black, 1.0)
-                .BuildGeometry(new Point(35, 20));
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.Black, null, textGeometry));
-
-            return new DrawingImage(drawingGroup);
-        }
-
-        private DrawingImage CreateQuestionSymbol()
-        {
-            var drawingGroup = new DrawingGroup();
-
-            // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
-
-            // Fragezeichen
-            var formattedText = new FormattedText("?", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, 
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
-
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(30, 10));
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
-
-            return new DrawingImage(drawingGroup);
-        }
-
-        private DrawingImage CreateEqualsSymbol()
-        {
-            var drawingGroup = new DrawingGroup();
-
-            // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
-
-            // Gleichheitszeichen
-            var formattedText = new FormattedText("=", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
-
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(25, 7));
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
-
-            return new DrawingImage(drawingGroup);
-        }
-
-        private DrawingImage CreateNotEqualsSymbol()
-        {
-            var drawingGroup = new DrawingGroup();
-
-            // Blauer Kreis
-            var circleGeometry = new EllipseGeometry(new Point(40, 40), 36, 36);
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.DodgerBlue, new Pen(Brushes.DodgerBlue, 1), circleGeometry));
-
-            // Gleichheitszeichen
-            var formattedText = new FormattedText("≠", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 42, Brushes.White, 1.0);
-
-            Geometry textGeometry = formattedText.BuildGeometry(new Point(25, 7));
-
-            drawingGroup.Children.Add(new GeometryDrawing(Brushes.White, null, textGeometry));
-
-            return new DrawingImage(drawingGroup);
-        }
-
-
         private Grid CreateSymbolControl(SymbolElement symbol)
         {
             Grid grid = _elementControlFactory.CreateBaseGrid(symbol.Width, symbol.Height, symbol, symbol.X, symbol.Y);
@@ -4257,15 +4133,12 @@
             // Symbol
             // ========================================================
 
-            Image image = new Image
-                {
-                    Source = CreateSymbolImage(symbol.SymbolType),
-
-                    Stretch = Stretch.Fill,
-
-                    IsHitTestVisible = true
-                };
-
+            var image = new Image
+            {
+                Source = _symbolVisualFactory.Create(symbol.SymbolType),
+                Stretch = Stretch.Fill,
+                IsHitTestVisible = true
+            };
 
             grid.Children.Add(image);
 
@@ -4280,9 +4153,7 @@
             // Verschieben
             // ========================================================
 
-            grid.PreviewMouseLeftButtonDown += Symbol_PreviewMouseLeftButtonDown;
-            grid.PreviewMouseMove += Symbol_PreviewMouseMove;
-            grid.PreviewMouseLeftButtonUp += Symbol_PreviewMouseLeftButtonUp;
+            this.ConfigureSymbolMouseEvents(grid);
 
             // --------------------------------------------------------
             // Resize-Griffe
@@ -4303,6 +4174,13 @@
             grid.ContextMenu = CreateSymbolContextMenu();
 
             return grid;
+        }
+
+        private void ConfigureSymbolMouseEvents(Grid grid)
+        {
+            grid.PreviewMouseLeftButtonDown += Symbol_PreviewMouseLeftButtonDown;
+            grid.PreviewMouseMove += Symbol_PreviewMouseMove;
+            grid.PreviewMouseLeftButtonUp += Symbol_PreviewMouseLeftButtonUp;
         }
 
         private ContextMenu CreateSymbolContextMenu()
