@@ -1,6 +1,5 @@
 ﻿namespace WhiteboardWPF
 {
-    using System.Globalization;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
@@ -899,11 +898,11 @@
 
             if (_selectedShapes.Count > 0 && _selectedTextElements.Count > 0)
             {
-                StartMultiElementDrag();
+                this.StartMultiElementDrag();
             }
             else if (_selectedShapes.Count > 1)
             {
-                StartMultiDrag();
+                this.StartMultiElementDrag();
             }
 
             shape.CaptureMouse();
@@ -2688,6 +2687,7 @@
             _selectedShape = shape;
         }
 
+        /*
         private void StartMultiDrag()
         {
             _multiDragStartPositions.Clear();
@@ -2698,6 +2698,7 @@
                 _multiDragStartPositions[shape] = new Point(Canvas.GetLeft(shape), Canvas.GetTop(shape));
             }
         }
+        */
 
         private void MoveSelectedShapes(double deltaX, double deltaY)
         {
