@@ -130,7 +130,7 @@
             this.InitializeElementLibrary();
             this.InitializeShapeMenu();
             this.InitializeSymbolMenu();
-            StatusText.Text = "Whiteboard bereit";
+            this.StatusText.Text = "Whiteboard bereit";
         }
 
         #region Properies
@@ -284,10 +284,14 @@
                     item.ShapeType == shapeType);
 
             if (item == null)
+            {
                 throw new InvalidOperationException($"Shape '{shapeType}' ist nicht in der Elementbibliothek registriert.");
+            }
 
             if (item.CreateModel() is not ShapeElement shape)
+            {
                 throw new InvalidOperationException($"Der Bibliothekseintrag '{item.Name}' erzeugt kein ShapeElement.");
+            }
 
             return shape;
         }
@@ -297,13 +301,19 @@
             foreach (ElementLibraryItem item in _elementLibrary.Items)
             {
                 if (item.Category != "Symbol")
+                {
                     continue;
+                }
 
                 if (item.CreateModel() is not SymbolElement symbol)
+                {
                     continue;
+                }
 
                 if (symbol.SymbolType == symbolType)
+                {
                     return symbol;
+                }
             }
 
             throw new InvalidOperationException($"Symbol '{symbolType}' ist nicht in der Elementbibliothek registriert.");
@@ -313,8 +323,7 @@
         {
             SymbolMenu.Items.Clear();
 
-            foreach (ElementLibraryItem item in _elementLibrary.Items
-                         .Where(item => item.Category == "Symbol"))
+            foreach (ElementLibraryItem item in _elementLibrary.Items.Where(item => item.Category == "Symbol"))
             {
                 var menuItem = new MenuItem
                 {
@@ -331,15 +340,21 @@
         private void LibrarySymbolMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not MenuItem menuItem)
+            {
                 return;
+            }
 
             if (menuItem.Tag is not ElementLibraryItem item)
+            {
                 return;
+            }
 
             if (item.CreateModel() is not SymbolElement symbol)
+            {
                 return;
+            }
 
-            AddSymbol(symbol.SymbolType);
+            this.AddSymbol(symbol.SymbolType);
 
             e.Handled = true;
         }
@@ -393,10 +408,6 @@
         {
             this._boardSizeManager.Update(WhiteBoardCanvas);
         }
-
-        // ============================================================
-        // Whiteboard - rechte Maustaste
-        // ============================================================
 
         #region Klick Events 
         /// <summary>
@@ -461,10 +472,7 @@
             var contextMenu = new ContextMenu();
 
 
-            // ========================================================
             // Text bearbeiten
-            // ========================================================
-
             var editTextItem = new MenuItem
             {
                 Header = "Text bearbeiten"
@@ -475,17 +483,11 @@
             contextMenu.Items.Add(editTextItem);
 
 
-            // ========================================================
             // Trennlinie
-            // ========================================================
-
             contextMenu.Items.Add(new Separator());
 
 
-            // ========================================================
             // Hintergrundfarbe
-            // ========================================================
-
             var backgroundColorMenuItem = new MenuItem
             {
                 Header = "Hintergrundfarbe"
@@ -542,24 +544,28 @@
         private void ShapeText_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (sender is not TextBox textBox)
+            {
                 return;
+            }
 
             if (textBox.Parent is not Grid shape)
+            {
                 return;
+            }
 
-
-            SelectShape(shape);
-
-            BeginTextEditing(shape);
+            this.SelectShape(shape);
+            this.BeginTextEditing(shape);
 
             e.Handled = true;
         }
 
         #endregion Klick Events 
 
-        // ============================================================
-        // Shape-Control erzeugen
-        // ============================================================
+        /// <summary>
+        /// Shape-Control erzeugen
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <returns></returns>
         private Grid CreateShapeControl(ShapeElement shape)
         {
             Grid grid = _elementControlFactory.CreateBaseGrid(shape.Width, shape.Height, shape, shape.X, shape.Y);
@@ -761,26 +767,31 @@
         private void CancelTextEditing(TextBox textBox)
         {
             if (textBox.Parent is not Grid shape)
+            {
                 return;
+            }
 
 
             if (shape.Tag is not ShapeElement model)
+            {
                 return;
+            }
 
             textBox.Text = _textBeforeEditing;
 
             model.Text = _textBeforeEditing;
 
             textBox.IsReadOnly = true;
-
-            _editingTextBox = null;
+            this._editingTextBox = null;
 
             this.StatusText.Text = "Textbearbeitung abgebrochen";
         }
 
-        // ============================================================
-        // Resize Cursor
-        // ============================================================
+        /// <summary>
+        /// Resize Cursor
+        /// </summary>
+        /// <param name="direction"></param>
+        /// <returns></returns>
         private Cursor GetResizeCursor(ResizeDirection direction)
         {
             return direction switch
@@ -810,9 +821,7 @@
                 return;
             }
 
-            // ========================================================
             // Pfeil erstellen
-            // ========================================================
             if (_isCreatingArrow)
             {
                 CreateArrow(_arrowSourceShape, shape);
@@ -822,51 +831,38 @@
                 return;
             }
 
-
-            // ========================================================
             // Resize-Griffe
-            // ========================================================
-
             if (IsResizeThumbSource(e.OriginalSource as DependencyObject))
             {
                 return;
             }
 
-            // ========================================================
             // Doppelklick auf Text
-            // ========================================================
-
             if (e.ClickCount >= 2 && e.OriginalSource is TextBox)
             {
                 return;
             }
 
 
-            // ========================================================
             // Normales Verschieben
-            // ========================================================
-
             if (_editingTextBox != null)
                 return;
 
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                // ========================================================
                 // Strg + Klick
-                // ========================================================
-
                 if (IsShapeSelected(shape))
                 {
-                    RemoveShapeFromSelection(shape);
+                    this.RemoveShapeFromSelection(shape);
 
-                    _selectedShape = _selectedShapes.LastOrDefault();
+                    this._selectedShape = _selectedShapes.LastOrDefault();
                 }
                 else
                 {
-                    AddShapeToSelection(shape);
+                    this.AddShapeToSelection(shape);
 
-                    _selectedShape = shape;
+                    this._selectedShape = shape;
                 }
             }
             else
@@ -880,27 +876,27 @@
                 // bestehende Mehrfachauswahl erhalten bleiben.
                 if (IsShapeSelected(shape) && (_selectedShapes.Count > 1 || _selectedTextElements.Count > 0))
                 {
-                    _selectedShape = shape;
+                    this._selectedShape = shape;
                 }
                 else
                 {
-                    SelectSingleShape(shape);
+                    this.SelectSingleShape(shape);
                 }
             }
 
-            _isDragging = true;
+            this._isDragging = true;
 
-            _dragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
+            this._dragStartMousePosition = e.GetPosition(WhiteBoardCanvas);
 
-            _dragStartShapeX = Canvas.GetLeft(shape);
+            this._dragStartShapeX = Canvas.GetLeft(shape);
 
-            _dragStartShapeY = Canvas.GetTop(shape);
+            this._dragStartShapeY = Canvas.GetTop(shape);
 
-            if (_selectedShapes.Count > 0 && _selectedTextElements.Count > 0)
+            if (this._selectedShapes.Count > 0 && this._selectedTextElements.Count > 0)
             {
                 this.StartMultiElementDrag();
             }
-            else if (_selectedShapes.Count > 1)
+            else if (this._selectedShapes.Count > 1)
             {
                 this.StartMultiElementDrag();
             }
@@ -914,14 +910,14 @@
         {
             if (sourceShape == null)
             {
-                CancelArrowCreation();
+                this.CancelArrowCreation();
                 return;
             }
 
 
             if (sourceShape == targetShape)
             {
-                StatusText.Text = "Quelle und Ziel müssen unterschiedlich sein.";
+                this.StatusText.Text = "Quelle und Ziel müssen unterschiedlich sein.";
 
                 return;
             }
@@ -929,14 +925,14 @@
 
             if (sourceShape.Tag is not ShapeElement sourceModel)
             {
-                CancelArrowCreation();
+                this.CancelArrowCreation();
                 return;
             }
 
 
             if (targetShape.Tag is not ShapeElement targetModel)
             {
-                CancelArrowCreation();
+                this.CancelArrowCreation();
                 return;
             }
 
@@ -2687,19 +2683,6 @@
             _selectedShape = shape;
         }
 
-        /*
-        private void StartMultiDrag()
-        {
-            _multiDragStartPositions.Clear();
-
-
-            foreach (Grid shape in _selectedShapes)
-            {
-                _multiDragStartPositions[shape] = new Point(Canvas.GetLeft(shape), Canvas.GetTop(shape));
-            }
-        }
-        */
-
         private void MoveSelectedShapes(double deltaX, double deltaY)
         {
             foreach (Grid shape in _selectedShapes.ToList())
@@ -2769,58 +2752,32 @@
 
         private void StartMultiElementDrag()
         {
-            _multiDragStartPositions.Clear();
+            this._multiDragStartPositions.Clear();
+            this._multiDragStartTextPositions.Clear();
+            this._multiDragStartSymbolPositions.Clear();
 
-            _multiDragStartTextPositions.Clear();
-
-            _multiDragStartSymbolPositions.Clear();
-
-
-            // ========================================================
             // Shapes
-            // ========================================================
-
             foreach (Grid shape in _selectedShapes)
             {
-                _multiDragStartPositions[shape] =
-                    new Point(
-                        Canvas.GetLeft(shape),
-                        Canvas.GetTop(shape));
+                _multiDragStartPositions[shape] = new Point(Canvas.GetLeft(shape), Canvas.GetTop(shape));
             }
 
-
-            // ========================================================
             // Text-Elemente
-            // ========================================================
-
             foreach (Grid text in _selectedTextElements)
             {
-                _multiDragStartTextPositions[text] =
-                    new Point(
-                        Canvas.GetLeft(text),
-                        Canvas.GetTop(text));
+                _multiDragStartTextPositions[text] = new Point(Canvas.GetLeft(text), Canvas.GetTop(text));
             }
 
-
-            // ========================================================
             // Symbole
-            // ========================================================
-
             foreach (Grid symbol in _selectedSymbols)
             {
-                _multiDragStartSymbolPositions[symbol] =
-                    new Point(
-                        Canvas.GetLeft(symbol),
-                        Canvas.GetTop(symbol));
+                _multiDragStartSymbolPositions[symbol] = new Point(Canvas.GetLeft(symbol), Canvas.GetTop(symbol));
             }
         }
 
         private void MoveSelectedElements(double deltaX, double deltaY)
         {
-            // ========================================================
             // Shapes
-            // ========================================================
-
             foreach (Grid shape in _selectedShapes.ToList())
             {
                 if (!_multiDragStartPositions.TryGetValue(shape, out Point start))
@@ -2841,11 +2798,7 @@
                 }
             }
 
-
-            // ========================================================
             // Text-Elemente
-            // ========================================================
-
             foreach (Grid textControl in _selectedTextElements.ToList())
             {
                 if (!_multiDragStartTextPositions.TryGetValue(textControl, out Point start))
@@ -2868,10 +2821,7 @@
             }
 
 
-            // ========================================================
             // Symbole
-            // ========================================================
-
             foreach (Grid symbolControl in _selectedSymbols.ToList())
             {
                 if (!_multiDragStartSymbolPositions.TryGetValue(symbolControl, out Point start))
@@ -2892,11 +2842,7 @@
                 }
             }
 
-
-            // ========================================================
             // Pfeile aktualisieren
-            // ========================================================
-
             this.UpdateArrows();
             this.UpdateBoardSize();
 
@@ -2913,54 +2859,6 @@
                 return;
 
             AddShape(shapeType);
-        }
-
-        // ============================================================
-        // Shape Definition Dreieck
-        // ============================================================
-
-        private FrameworkElement CreateTriangleVisual(ShapeElement shape)
-        {
-            return new System.Windows.Shapes.Polygon
-            {
-                Fill = this.GetShapeBackgroundBrush(shape),
-                Stroke = Brushes.DimGray,
-                StrokeThickness = 2,
-                Points = new PointCollection
-                    {
-                        new Point(0.5, 0),
-                        new Point(1, 1),
-                        new Point(0, 1)
-                    },
-
-                Stretch = Stretch.Fill,
-                IsHitTestVisible = true
-            };
-        }
-
-        // ============================================================
-        // Shape Definition Hexagon
-        // ============================================================
-        private FrameworkElement CreateHexagonVisual(ShapeElement shape)
-        {
-            return new System.Windows.Shapes.Polygon
-            {
-                Fill = this.GetShapeBackgroundBrush(shape),
-                Stroke = Brushes.DimGray,
-                StrokeThickness = 2,
-                Points = new PointCollection
-                    {
-                        new Point(0.25, 0),
-                        new Point(0.75, 0),
-                        new Point(1, 0.5),
-                        new Point(0.75, 1),
-                        new Point(0.25, 1),
-                        new Point(0, 0.5)
-                    },
-
-                Stretch = Stretch.Fill,
-                IsHitTestVisible = true
-            };
         }
 
         private MenuItem CreateBackgroundColorMenuItem(string name, string color)
