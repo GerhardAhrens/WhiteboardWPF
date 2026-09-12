@@ -49,6 +49,7 @@
         private readonly ResizeThumbFactory _resizeThumbFactory = new();
         private readonly TextElementTextBoxFactory _textElementTextBoxFactory = new();
         private readonly SymbolVisualFactory _symbolVisualFactory = new();
+        private readonly ResizeCalculator _resizeCalculator = new();
 
         // ============================================================
         // Verschieben von Shapes und Text-Elemente
@@ -1736,9 +1737,7 @@
         // Resize gestartet
         // ============================================================
 
-        private void ResizeThumb_DragStarted(
-            object sender,
-            DragStartedEventArgs e)
+        private void ResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
         {
             if (sender is not Thumb thumb)
                 return;
@@ -1754,28 +1753,20 @@
             // Auswahl
             // ========================================================
 
-            // Shape
             if (grid.Tag is ShapeElement)
             {
-                SelectShape(grid);
+                this.SelectShape(grid);
             }
-            // Text
             else if (grid.Tag is TextElement)
             {
-                SelectTextElement(grid);
+                this.SelectTextElement(grid);
             }
-            // Symbol
             else if (grid.Tag is SymbolElement)
             {
-                _selectedSymbol = grid;
+                this._selectedSymbol = grid;
 
-                SetSymbolSelectedVisual(
-                    grid,
-                    true);
-
-                SetResizeHandlesVisibility(
-                    grid,
-                    Visibility.Visible);
+                this.SetSymbolSelectedVisual(grid, true);
+                this.SetResizeHandlesVisibility(grid, Visibility.Visible);
             }
             else
             {
@@ -1784,276 +1775,150 @@
 
 
             // ========================================================
-            // Resize starten
+            // Resize initialisieren
             // ========================================================
 
-            _isResizing = true;
-
-            _resizeDirection = direction;
-
-            _resizeStartMousePosition =
-                Mouse.GetPosition(
-                    WhiteBoardCanvas);
-
-            _resizeStartX =
-                Canvas.GetLeft(grid);
-
-            _resizeStartY =
-                Canvas.GetTop(grid);
-
-            _resizeStartWidth =
-                grid.ActualWidth;
-
-            _resizeStartHeight =
-                grid.ActualHeight;
-
-
-            StatusText.Text =
-                "Größe ändern";
+            this.InitializeResize(grid, direction);
         }
 
-
-        // ============================================================
-        // Resize
-        // ============================================================
-        private void ResizeThumb_DragDelta(
-            object sender,
-            DragDeltaEventArgs e)
+        private void InitializeResize(Grid grid, ResizeDirection direction)
         {
-            if (!_isResizing)
+            this._isResizing = true;
+            this._resizeDirection = direction;
+            this._resizeStartMousePosition = Mouse.GetPosition(this.WhiteBoardCanvas);
+            this._resizeStartX = Canvas.GetLeft(grid);
+            this._resizeStartY = Canvas.GetTop(grid);
+            this._resizeStartWidth = grid.ActualWidth;
+            this._resizeStartHeight = grid.ActualHeight;
+            this.StatusText.Text = "Größe ändern";
+        }
+
+        /// <summary>
+        /// Resize
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        {
+            if (this._isResizing == false)
+            {
                 return;
+            }
 
             if (sender is not Thumb thumb)
+            {
                 return;
+            }
 
             if (thumb.Parent is not Grid grid)
+            {
                 return;
-
-
-            Point currentMousePosition =
-                Mouse.GetPosition(
-                    WhiteBoardCanvas);
-
-
-            double deltaX =
-                currentMousePosition.X -
-                _resizeStartMousePosition.X;
-
-
-            double deltaY =
-                currentMousePosition.Y -
-                _resizeStartMousePosition.Y;
-
-
-            double newX =
-                _resizeStartX;
-
-            double newY =
-                _resizeStartY;
-
-            double newWidth =
-                _resizeStartWidth;
-
-            double newHeight =
-                _resizeStartHeight;
-
-
-            // ========================================================
-            // Links
-            // ========================================================
-
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Left))
-            {
-                newWidth =
-                    _resizeStartWidth -
-                    deltaX;
-
-
-                if (newWidth < MinimumShapeWidth)
-                {
-                    newWidth =
-                        MinimumShapeWidth;
-
-                    newX =
-                        _resizeStartX +
-                        (_resizeStartWidth -
-                         MinimumShapeWidth);
-                }
-                else
-                {
-                    newX =
-                        _resizeStartX +
-                        deltaX;
-                }
             }
 
 
-            // ========================================================
-            // Rechts
-            // ========================================================
-
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Right))
-            {
-                newWidth =
-                    Math.Max(
-                        MinimumShapeWidth,
-                        _resizeStartWidth +
-                        deltaX);
-            }
-
+            Point currentMousePosition = Mouse.GetPosition(WhiteBoardCanvas);
 
             // ========================================================
-            // Oben
+            // Neue Geometrie berechnen
             // ========================================================
+            var resizeResult = _resizeCalculator.Calculate(
+                _resizeDirection,
+                _resizeStartMousePosition,
+                currentMousePosition,
+                _resizeStartX,
+                _resizeStartY,
+                _resizeStartWidth,
+                _resizeStartHeight,
+                MinimumShapeWidth,
+                MinimumShapeHeight);
 
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Top))
-            {
-                newHeight =
-                    _resizeStartHeight -
-                    deltaY;
-
-
-                if (newHeight < MinimumShapeHeight)
-                {
-                    newHeight =
-                        MinimumShapeHeight;
-
-                    newY =
-                        _resizeStartY +
-                        (_resizeStartHeight -
-                         MinimumShapeHeight);
-                }
-                else
-                {
-                    newY =
-                        _resizeStartY +
-                        deltaY;
-                }
-            }
-
-
-            // ========================================================
-            // Unten
-            // ========================================================
-
-            if (_resizeDirection.HasFlag(
-                    ResizeDirection.Bottom))
-            {
-                newHeight =
-                    Math.Max(
-                        MinimumShapeHeight,
-                        _resizeStartHeight +
-                        deltaY);
-            }
+            double newX = resizeResult.X;
+            double newY = resizeResult.Y;
+            double newWidth = resizeResult.Width;
+            double newHeight = resizeResult.Height;
 
 
             // ========================================================
             // Control aktualisieren
             // ========================================================
+            grid.Width =  newWidth;
+            grid.Height = newHeight;
 
-            grid.Width =
-                newWidth;
-
-            grid.Height =
-                newHeight;
-
-
-            Canvas.SetLeft(
-                grid,
-                newX);
-
-            Canvas.SetTop(
-                grid,
-                newY);
+            Canvas.SetLeft(grid, newX);
+            Canvas.SetTop(grid, newY);
 
 
             // ========================================================
             // Datenmodell aktualisieren
             // ========================================================
-
-            if (grid.Tag is ShapeElement shape)
-            {
-                shape.X =
-                    newX;
-
-                shape.Y =
-                    newY;
-
-                shape.Width =
-                    newWidth;
-
-                shape.Height =
-                    newHeight;
-            }
-            else if (grid.Tag is TextElement text)
-            {
-                text.X =
-                    newX;
-
-                text.Y =
-                    newY;
-
-                text.Width =
-                    newWidth;
-
-                text.Height =
-                    newHeight;
-            }
-            else if (grid.Tag is SymbolElement symbol)
-            {
-                symbol.X =
-                    newX;
-
-                symbol.Y =
-                    newY;
-
-                symbol.Width =
-                    newWidth;
-
-                symbol.Height =
-                    newHeight;
-            }
-
+            this.UpdateElementSizeAndPosition(grid, newX, newY, newWidth, newHeight);
 
             // ========================================================
             // Pfeile aktualisieren
             // ========================================================
+            this.UpdateArrows();
 
-            UpdateArrows();
+            this.StatusText.Text = $"Größe: {newWidth:0} x {newHeight:0}";
+        }
 
 
-            StatusText.Text = $"Größe: {newWidth:0} x {newHeight:0}";
+        private void UpdateElementSizeAndPosition(Grid grid, double x, double y, double width, double height)
+        {
+            if (grid.Tag is ShapeElement shape)
+            {
+                shape.X = x;
+                shape.Y = y;
+                shape.Width = width;
+                shape.Height = height;
+            }
+            else if (grid.Tag is TextElement text)
+            {
+                text.X = x;
+                text.Y = y;
+                text.Width = width;
+                text.Height = height;
+            }
+            else if (grid.Tag is SymbolElement symbol)
+            {
+                symbol.X = x;
+                symbol.Y = y;
+                symbol.Width = width;
+                symbol.Height = height;
+            }
         }
 
         // ============================================================
         // Resize beendet
         // ============================================================
 
-        private void ResizeThumb_DragCompleted(
-            object sender,
-            DragCompletedEventArgs e)
+        private void ResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             _isResizing = false;
 
 
             if (sender is not Thumb thumb)
+            {
                 return;
+            }
 
 
             if (thumb.Parent is not Grid grid)
+            {
                 return;
+            }
 
 
+            this.UpdateResizeCompletedStatus(grid);
+        }
+
+        private void UpdateResizeCompletedStatus(Grid grid)
+        {
             if (grid.Tag is ShapeElement shape)
             {
                 StatusText.Text = $"Shape-Größe: {shape.Width:0} x {shape.Height:0}";
 
                 return;
             }
-
 
             if (grid.Tag is TextElement text)
             {
@@ -2062,37 +1927,11 @@
                 return;
             }
 
-
             if (grid.Tag is SymbolElement symbol)
             {
                 StatusText.Text = $"Symbol-Größe: {symbol.Width:0} x {symbol.Height:0}";
             }
         }
-
-        /*
-        private void AddRectangle_Click(object sender, RoutedEventArgs e)
-        {
-            AddShape(ShapeType.Rectangle);
-        }
-
-
-        private void AddRoundedRectangle_Click(object sender, RoutedEventArgs e)
-        {
-            AddShape(ShapeType.RoundedRectangle);
-        }
-
-
-        private void AddEllipse_Click(object sender, RoutedEventArgs e)
-        {
-            AddShape(ShapeType.Ellipse);
-        }
-
-
-        private void AddDiamond_Click(object sender, RoutedEventArgs e)
-        {
-            AddShape(ShapeType.Diamond);
-        }
-        */
 
         private void AddShape(ShapeType shapeType)
         {
