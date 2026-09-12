@@ -39,7 +39,7 @@
 
                 <Separator />
 
-                <MenuItem Click="ExportBoard_Click"  Header="Exportieren als PNG" />
+                <MenuItem Click="ExportBoard_Click" Header="Exportieren als PNG" />
 
                 <Separator />
 
@@ -173,7 +173,8 @@
                     Height="500"
                     Background="{StaticResource BoardBackgroundBrush}"
                     MouseLeftButtonDown="WhiteBoardCanvas_MouseLeftButtonDown"
-                    MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown">
+                    MouseRightButtonDown="WhiteBoardCanvas_MouseRightButtonDown"
+                    PreviewMouseLeftButtonDown="WhiteBoardCanvas_PreviewMouseLeftButtonDown">
 
                     <Canvas.ContextMenu>
 

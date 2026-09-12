@@ -432,6 +432,17 @@
             this.SelectShape(null);
         }
 
+        private void WhiteBoardCanvas_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Nur reagieren, wenn tatsächlich die freie Canvas-Fläche angeklickt wurde.
+            if (e.OriginalSource != WhiteBoardCanvas)
+            {
+                return;
+            }
+
+            this.ClearAllSelections();
+        }
+
         /// <summary>
         /// Shape erstellen
         /// </summary>
@@ -880,7 +891,11 @@
                 }
                 else
                 {
-                    this.SelectSingleShape(shape);
+                    //this.SelectSingleShape(shape);
+                    this.ClearAllSelections();
+                    this.AddShapeToSelection(shape);
+
+                    this._selectedShape = shape;
                 }
             }
 
@@ -3516,71 +3531,42 @@
 
             foreach (Grid shape in _selectedShapes.ToList())
             {
-                SetShapeSelectedVisual(shape, false);
-                SetResizeHandlesVisibility(shape, Visibility.Collapsed);
+                this.SetShapeSelectedVisual(shape, false);
+                this.SetResizeHandlesVisibility(shape, Visibility.Collapsed);
             }
 
             _selectedShapes.Clear();
 
-
-            // ========================================================
             // Einzelnes Shape
-            // ========================================================
-
             if (_selectedShape != null)
             {
-                SetShapeSelectedVisual(
-                    _selectedShape,
-                    false);
-
-                SetResizeHandlesVisibility(
-                    _selectedShape,
-                    Visibility.Collapsed);
+                this.SetShapeSelectedVisual(_selectedShape, false);
+                this.SetResizeHandlesVisibility(_selectedShape, Visibility.Collapsed);
 
                 _selectedShape = null;
             }
 
 
-            // ========================================================
             // Text-Elemente
-            // ========================================================
-
             foreach (Grid text in _selectedTextElements.ToList())
             {
-                SetResizeHandlesVisibility(
-                    text,
-                    Visibility.Collapsed);
+                this.SetResizeHandlesVisibility(text, Visibility.Collapsed);
             }
 
             _selectedTextElements.Clear();
-
             _selectedTextElement = null;
 
-            // ========================================================
             // Symbole
-            // ========================================================
-
-            foreach (Grid symbol in
-                     _selectedSymbols.ToList())
+            foreach (Grid symbol in _selectedSymbols.ToList())
             {
-                SetSymbolSelectedVisual(
-                    symbol,
-                    false);
-
-                SetResizeHandlesVisibility(
-                    symbol,
-                    Visibility.Collapsed);
+                this.SetSymbolSelectedVisual(symbol, false);
+                this.SetResizeHandlesVisibility(symbol, Visibility.Collapsed);
             }
 
-
             _selectedSymbols.Clear();
-
             _selectedSymbol = null;
 
-            // ========================================================
             // Pfeil Einzel- und Mehrfachauswahl
-            // ========================================================
-
             foreach (System.Windows.Shapes.Path arrow in _selectedArrows.ToList())
             {
                 SetArrowSelectedVisual(arrow, false);
@@ -3588,10 +3574,7 @@
 
             _selectedArrows.Clear();
 
-            // ========================================================
             // Drag-Zustände zurücksetzen
-            // ========================================================
-
             _isDragging = false;
             _isDraggingText = false;
             _isResizing = false;
